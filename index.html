@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Differential Equations Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <button id="themeToggle">Toggle Theme</button>
+    
+    <div id="welcomeSection">
+        <h1>Differential Equations Calculator</h1>
+        
+        <p>This project is accredited to Bea Marie Q. Delos Santos, 
+        submitted to Engr. Ramel Sigue for EMATH 213: Differential Equations</p>
+        
+        <button id="proceedButton">Start Calculator</button>
+    </div>
+
+    <div id="calculatorSection" style="display:none;">
+        <h2>Select Calculation Type</h2>
+        
+        <select id="calcType">
+            <option value="">Select Calculation Type</option>
+            <option value="growth-decay">Growth and Decay</option>
+            <option value="heat-cool">Heat Transfer and Cooling</option>
+        </select>
+
+        <div id="calculatorOptions" style="display:none;">
+            <h3 id="calculatorTitle">Select Calculation Variant</h3>
+            
+            <select id="calculationType">
+                <option value="">Select Calculation Variant</option>
+            </select>
+
+            <div id="inputForm"></div>
+
+            <button id="calculateButton">Calculate</button>
+            <button id="graphButton">Graph Results</button>
+        </div>
+
+        <div id="graphContainer">
+            <canvas id="calculationChart"></canvas>
+        </div>
+
+        <div id="resultSection" style="display:none;">
+            <h3>Results</h3>
+            <div id="resultText"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
