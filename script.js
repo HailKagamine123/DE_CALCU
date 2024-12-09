@@ -552,60 +552,92 @@ Final Results:
     promptContinue();
 }
 
-function calculateGrowthDecayTime() {
-    const x0 = parseFloat(document.getElementById('initial-value').value);
-    const targetValue = parseFloat(document.getElementById('amount1').value);
-    const unitX = document.getElementById('unit-x').value;
-    const timeUnit = document.getElementById('unit-time').value;
+function calculateGrowthDecayInitial() {
+    // Comprehensive element selection and validation
+    const requiredElements = [
+        'initial-value', 'amount1', 'time1', 'amount2', 'unit-x', 'unit-time'
+    ];
 
-    // Step 1: Ensure non-zero values
-    if (x0 === 0 || targetValue === 0) {
-        alert('Initial value and target value must not be zero.');
+    // Check for missing elements
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    if (missingElements.length > 0) {
+        console.error('Missing input elements:', missingElements);
+        alert(`Error: The following input fields are missing: ${missingElements.join(', ')}. 
+Please ensure the form is correctly generated.`);
         return;
     }
 
-    // Step 2: Calculate growth/decay rate
-    const k = Math.log(targetValue / x0);
-    
-    // Step 3: Calculate time to reach target
-    const time = Math.abs(k);
-    
-    // Step 4: Denormalize time
-    const denormalizedTime = denormalizeTime(time, timeUnit);
+    // Get all required elements
+    const initialValueEl = document.getElementById('initial-value');
+    const amount1El = document.getElementById('amount1');
+    const time1El = document.getElementById('time1');
+    const amount2El = document.getElementById('amount2');
+    const unitXEl = document.getElementById('unit-x');
+    const timeUnitEl = document.getElementById('unit-time');
 
-    // Step 5: Verify target value calculation
-    const verifyTargetValue = x0 * Math.exp(k);
+    // Validate input values
+    const inputValues = [
+        { el: initialValueEl, name: 'Initial Value' },
+        { el: amount1El, name: 'Amount 1' },
+        { el: time1El, name: 'Time 1' },
+        { el: amount2El, name: 'Amount 2' },
+        { el: unitXEl, name: 'Unit of Quantity' }
+    ];
+
+    const invalidInputs = inputValues.filter(input => 
+        !input.el.value || 
+        (input.name !== 'Unit of Quantity' && isNaN(parseFloat(input.el.value)))
+    );
+
+    if (invalidInputs.length > 0) {
+        const invalidNames = invalidInputs.map(input => input.name);
+        alert(`Please check the following inputs: ${invalidNames.join(', ')}`);
+        return;
+    }
+
+    // Parse input values
+    const x0 = parseFloat(initialValueEl.value);
+    const x1 = parseFloat(amount1El.value);
+    const t1 = parseFloat(time1El.value);
+    const x2 = parseFloat(amount2El.value);
+    const unitX = unitXEl.value;
+    const timeUnit = timeUnitEl.value;
+
+    // Normalize time
+    const t1Norm = normalizeTime(t1, timeUnit);
+
+    // Detailed calculation steps
+    // Step 1: Calculate growth/decay rate (k)
+    const k = Math.log(x1 / x0) / t1Norm;
+
+    // Step 2: Calculate time to reach x2
+    const t2 = Math.log(x2 / x0) / k;
 
     // Display result with detailed steps
+    const resultSection = document.getElementById('resultSection');
+    const resultText = document.getElementById('resultText');
+
     resultSection.style.display = 'block';
     resultText.innerHTML = `
 Detailed Calculation Steps:
 
-Step 1: Initial Conditions
-Initial Value (x₀) = ${x0.toFixed(4)} ${unitX}
-Target Value (x₁) = ${targetValue.toFixed(4)} ${unitX}
+Step 1: Calculate Growth/Decay Rate (k)
+k = ln(${x1} / ${x0}) / ${t1Norm.toFixed(4)}
+  = ${k.toFixed(4)} per ${timeUnit}
 
-Step 2: Calculate Growth/Decay Rate (k)
-k = ln(${targetValue} / ${x0})
-  = ln(${(targetValue/x0).toFixed(4)})
-  = ${k.toFixed(4)} per normalized hour
+Step 2: Calculate Time to Reach Target Value (t₂)
+t₂ = ln(${x2} / ${x0}) / ${k.toFixed(4)}
+   = ${t2.toFixed(4)} ${timeUnit}
 
-Step 3: Calculate Time to Reach Target
-t = |${k.toFixed(4)}| = ${time.toFixed(4)} normalized hours
+Verification:
+- Initial Value (x₀): ${x0.toFixed(4)} ${unitX}
+- Value at t₁ (x₁): ${x1.toFixed(4)} ${unitX}
+- Target Value (x₂): ${x2.toFixed(4)} ${unitX}
+- Calculated Time (t₂): ${t2.toFixed(4)} ${timeUnit}
 
-Step 4: Convert to Specific Time Unit
-Time in ${timeUnit} = ${time.toFixed(4)} * 1 = ${denormalizedTime.toFixed(4)} ${timeUnit}
-
-Step 5: Verification
-Verifying target value:
-x₁ = ${x0.toFixed(4)} * e^(${k.toFixed(4)})
-    = ${verifyTargetValue.toFixed(4)} ${unitX}
-
-Verification match: ${Math.abs(verifyTargetValue - targetValue) < 0.0001 ? 'YES' : 'NO'}
-
-Final Results:
-- Time to Reach Target: ${denormalizedTime.toFixed(4)} ${timeUnit}
-- Growth/Decay Rate (k): ${k.toFixed(4)} per ${timeUnit}
+Verification Check:
+x₀ * e^(k * t₂) = ${(x0 * Math.exp(k * t2)).toFixed(4)} ${unitX}
+Expected x₂    = ${x2.toFixed(4)} ${unitX}
     `;
     promptContinue();
 }
