@@ -39,6 +39,37 @@ function denormalizeTime(value, unit) {
     }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const themeToggle = document.getElementById('themeToggle');
+    
+    // Function to toggle theme
+    function toggleTheme() {
+        document.body.classList.toggle('dark-theme');
+        
+        // Save theme preference to localStorage
+        const isDarkMode = document.body.classList.contains('dark-theme');
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        
+        // Update button text
+        themeToggle.textContent = isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+    
+    // Add click event listener to theme toggle button
+    themeToggle.addEventListener('click', toggleTheme);
+    
+    // Check for saved theme preference or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Apply theme on page load
+    if (savedTheme === 'dark' || (!savedTheme && prefersDarkMode)) {
+        document.body.classList.add('dark-theme');
+        themeToggle.textContent = '☀️ Light Mode';
+    } else {
+        themeToggle.textContent = '🌙 Dark Mode';
+    }
+});
+
 function promptContinue() {
     // Create a confirmation dialog using CSS variables for theming
     const continuePrompt = document.createElement('div');
