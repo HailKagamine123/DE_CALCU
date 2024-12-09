@@ -758,30 +758,28 @@ Final Results:
 }
 
 // Include Chart.js library
+// Include Chart.js library
 const script = document.createElement('script');
 script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+script.async = true;
+script.onerror = () => {
+    console.error('Failed to load Chart.js');
+    alert('Could not load graphing library. Please check your internet connection.');
+};
 document.head.appendChild(script);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Theme Toggle
-    const themeToggle = document.getElementById('themeToggle');
     const graphButton = document.getElementById('graphButton');
     const graphContainer = document.getElementById('graphContainer');
 
-    // Theme Toggle Logic
-    themeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-theme');
-        localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
-    });
-
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-theme');
-    }
-
     // Graphing Button Logic
     graphButton.addEventListener('click', () => {
+        // Check if Chart is defined before attempting to use it
+        if (typeof Chart === 'undefined') {
+            alert('Graphing library is still loading. Please try again in a moment.');
+            return;
+        }
+
         const selectedCalcType = calcType.value;
         const selectedCalculationType = calculationType.value;
 
