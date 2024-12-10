@@ -713,6 +713,93 @@ Final Results:
     promptContinue();
 }
 
+function calculateHeatInitialTemp() {
+    const ambientTemp = parseFloat(document.getElementById('ambient-temp').value);
+    const knownTime1 = parseFloat(document.getElementById('known-time1').value);
+    const knownTemp1 = parseFloat(document.getElementById('known-temp1').value);
+    const knownTime2 = parseFloat(document.getElementById('known-time2').value);
+    const knownTemp2 = parseFloat(document.getElementById('known-temp2').value);
+    const tempUnit = document.getElementById('unit-temp').value;
+    const timeUnit = document.getElementById('unit-time').value;
+
+    // Get result section elements
+    const resultSection = document.getElementById('resultSection');
+    const resultText = document.getElementById('resultText');
+
+    // Convert temperatures to Kelvin
+    const ambientTempK = toKelvin(ambientTemp, tempUnit);
+    const knownTemp1K = toKelvin(knownTemp1, tempUnit);
+    const knownTemp2K = toKelvin(knownTemp2, tempUnit);
+
+    // Validate temperature progression
+    const isValidCooling = knownTemp1K < ambientTempK && knownTemp2K < knownTemp1K;
+    const isValidHeating = knownTemp1K > ambientTempK && knownTemp2K > knownTemp1K;
+
+    if (!isValidCooling && !isValidHeating) {
+        alert('Invalid temperature progression. Temperatures must consistently move towards ambient temperature.');
+        return;
+    }
+
+    // Standard heat transfer coefficient assumption
+    const k = 1;
+
+    // Solve for initial temperature
+    const numerator = Math.log((knownTemp1K - ambientTempK) / (knownTemp2K - ambientTempK));
+    const denominator = (knownTime2 - knownTime1) * k;
+    const initialTempK = ambientTempK + (knownTemp1K - ambientTempK) * Math.exp(k * knownTime1);
+
+    // Denormalize and convert temperatures back to original unit
+    const initialTemp = fromKelvin(initialTempK, tempUnit);
+
+    // Verify temperatures at known times
+    const verifyTemp1K = ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * knownTime1);
+    const verifyTemp2K = ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * knownTime2);
+    const verifyTemp1 = fromKelvin(verifyTemp1K, tempUnit);
+    const verifyTemp2 = fromKelvin(verifyTemp2K, tempUnit);
+
+    // Display result with detailed steps
+    resultSection.style.display = 'block';
+    resultText.innerHTML = `
+Detailed Heat Transfer Initial Temperature Calculation Steps:
+
+Step 1: Temperature Analysis
+Ambient Temperature (Tₐ): ${ambientTempK.toFixed(4)} K (${ambientTemp.toFixed(4)} ${tempUnit})
+Known Point 1: 
+  - Time (t₁): ${knownTime1.toFixed(4)} ${timeUnit}
+  - Temperature: ${knownTemp1K.toFixed(4)} K (${knownTemp1.toFixed(4)} ${tempUnit})
+Known Point 2: 
+  - Time (t₂): ${knownTime2.toFixed(4)} ${timeUnit}
+  - Temperature: ${knownTemp2K.toFixed(4)} K (${knownTemp2.toFixed(4)} ${tempUnit})
+
+Step 2: Heat Transfer Coefficient Assumption
+k = 1 (standard heat transfer rate)
+
+Step 3: Calculate Initial Temperature
+T₀ = Tₐ + (T₁ - Tₐ) * e^(k * t₁)
+   = ${ambientTempK.toFixed(4)} + 
+     (${knownTemp1K.toFixed(4)} - ${ambientTempK.toFixed(4)}) * 
+     e^(1 * ${knownTime1.toFixed(4)})
+   = ${initialTempK.toFixed(4)} K
+   = ${initialTemp.toFixed(4)} ${tempUnit}
+
+Step 4: Verification of Known Temperatures
+At Time t₁: 
+  Predicted: ${verifyTemp1K.toFixed(4)} K (${verifyTemp1.toFixed(4)} ${tempUnit})
+  Actual: ${knownTemp1K.toFixed(4)} K (${knownTemp1.toFixed(4)} ${tempUnit})
+  Difference: ${Math.abs(verifyTemp1 - knownTemp1).toFixed(4)} ${tempUnit}
+
+At Time t₂:
+  Predicted: ${verifyTemp2K.toFixed(4)} K (${verifyTemp2.toFixed(4)} ${tempUnit})
+  Actual: ${knownTemp2K.toFixed(4)} K (${knownTemp2.toFixed(4)} ${tempUnit})
+  Difference: ${Math.abs(verifyTemp2 - knownTemp2).toFixed(4)} ${tempUnit}
+
+Final Result:
+- Initial Temperature (T₀): ${initialTemp.toFixed(4)} ${tempUnit}
+    `;
+
+    promptContinue();
+}
+
 function calculateHeatTransferTime() {
     const ambientTemp = parseFloat(document.getElementById('ambient-temp').value);
     const initialTemp = parseFloat(document.getElementById('initial-temp').value);
