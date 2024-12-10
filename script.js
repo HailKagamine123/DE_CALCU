@@ -470,93 +470,74 @@ At time ${t2} ${timeUnit}, x is ${x2.toFixed(4)} ${unitX}
 }
 
 function calculateGrowthDecayInitial() {
-    // Comprehensive element selection and validation
-    const requiredElements = [
-        'initial-value', 'amount1', 'time1', 'amount2', 'unit-x', 'unit-time'
-    ];
+  // Comprehensive element selection and validation
+  const requiredElements = ['amount1', 'time1', 'amount2', 'time2', 'unit-x', 'unit-time'];
+  const missingElements = requiredElements.filter(id => !document.getElementById(id));
 
-    // Check for missing elements
-    const missingElements = requiredElements.filter(id => !document.getElementById(id));
-    if (missingElements.length > 0) {
-        console.error('Missing input elements:', missingElements);
-        alert(`Error: The following input fields are missing: ${missingElements.join(', ')}. 
-Please ensure the form is correctly generated.`);
-        return;
-    }
+  if (missingElements.length > 0) {
+    console.error('Missing input elements:', missingElements);
+    alert(`Error: The following input fields are missing: ${missingElements.join(', ')}. Please ensure the form is correctly generated.`);
+    return;
+  }
 
-    // Get all required elements
-    const initialValueEl = document.getElementById('initial-value');
-    const amount1El = document.getElementById('amount1');
-    const time1El = document.getElementById('time1');
-    const amount2El = document.getElementById('amount2');
-    const unitXEl = document.getElementById('unit-x');
-    const timeUnitEl = document.getElementById('unit-time');
+  // Get all required elements
+  const amount1El = document.getElementById('amount1');
+  const time1El = document.getElementById('time1');
+  const amount2El = document.getElementById('amount2');
+  const time2El = document.getElementById('time2');
+  const unitXEl = document.getElementById('unit-x');
+  const timeUnitEl = document.getElementById('unit-time');
 
-    // Validate input values
-    const inputValues = [
-        { el: initialValueEl, name: 'Initial Value' },
-        { el: amount1El, name: 'Amount 1' },
-        { el: time1El, name: 'Time 1' },
-        { el: amount2El, name: 'Amount 2' },
-        { el: unitXEl, name: 'Unit of Quantity' }
-    ];
+  // Validate input values
+  const inputValues = [
+    { el: amount1El, name: 'Amount 1' },
+    { el: time1El, name: 'Time 1' },
+    { el: amount2El, name: 'Amount 2' },
+    { el: time2El, name: 'Time 2' },
+    { el: unitXEl, name: 'Unit of Quantity' }
+  ];
+  const invalidInputs = inputValues.filter(input => !input.el.value || (input.name !== 'Unit of Quantity' && isNaN(parseFloat(input.el.value))));
+  if (invalidInputs.length > 0) {
+    const invalidNames = invalidInputs.map(input => input.name);
+    alert(`Please check the following inputs: ${invalidNames.join(', ')}`);
+    return;
+  }
 
-    const invalidInputs = inputValues.filter(input => 
-        !input.el.value || 
-        (input.name !== 'Unit of Quantity' && isNaN(parseFloat(input.el.value)))
-    );
+  // Parse input values
+  const x1 = parseFloat(amount1El.value);
+  const t1 = parseFloat(time1El.value);
+  const x2 = parseFloat(amount2El.value);
+  const t2 = parseFloat(time2El.value);
+  const unitX = unitXEl.value;
+  const timeUnit = timeUnitEl.value;
 
-    if (invalidInputs.length > 0) {
-        const invalidNames = invalidInputs.map(input => input.name);
-        alert(`Please check the following inputs: ${invalidNames.join(', ')}`);
-        return;
-    }
+  // Normalize time
+  const t1Norm = normalizeTime(t1, timeUnit);
+  const t2Norm = normalizeTime(t2, timeUnit);
 
-    // Parse input values
-    const x0 = parseFloat(initialValueEl.value);
-    const x1 = parseFloat(amount1El.value);
-    const t1 = parseFloat(time1El.value);
-    const x2 = parseFloat(amount2El.value);
-    const unitX = unitXEl.value;
-    const timeUnit = timeUnitEl.value;
+  // Calculate initial value (x0)
+  const x0 = x1 / Math.exp(Math.log(x2 / x1) * (t1Norm / (t2Norm - t1Norm)));
 
-    // Normalize time
-    const t1Norm = normalizeTime(t1, timeUnit);
-
-    // Detailed calculation steps
-    // Step 1: Calculate growth/decay rate (k)
-    const k = Math.log(x1 / x0) / t1Norm;
-
-    // Step 2: Calculate time to reach x2
-    const t2 = Math.log(x2 / x0) / k;
-
-    // Display result with detailed steps
-    const resultSection = document.getElementById('resultSection');
-    const resultText = document.getElementById('resultText');
-
-    resultSection.style.display = 'block';
-    resultText.innerHTML = `
+  // Display result with detailed steps
+  const resultSection = document.getElementById('resultSection');
+  const resultText = document.getElementById('resultText');
+  resultSection.style.display = 'block';
+  resultText.innerHTML = `
 Detailed Calculation Steps:
-
-Step 1: Calculate Growth/Decay Rate (k)
-k = ln(${x1} / ${x0}) / ${t1Norm.toFixed(4)}
-  = ${k.toFixed(4)} per ${timeUnit}
-
-Step 2: Calculate Time to Reach Target Value (t₂)
-t₂ = ln(${x2} / ${x0}) / ${k.toFixed(4)}
-   = ${t2.toFixed(4)} ${timeUnit}
+Step 1: Calculate Initial Value (x₀)
+x₀ = x₁ / (x₂ / x₁)^(t₁ / (t₂ - t₁))
+   = ${x1.toFixed(4)} / (${x2.toFixed(4)} / ${x1.toFixed(4)})^(${t1Norm.toFixed(4)} / (${t2Norm.toFixed(4)} - ${t1Norm.toFixed(4)}))
+   = ${x0.toFixed(4)} ${unitX}
 
 Verification:
-- Initial Value (x₀): ${x0.toFixed(4)} ${unitX}
 - Value at t₁ (x₁): ${x1.toFixed(4)} ${unitX}
-- Target Value (x₂): ${x2.toFixed(4)} ${unitX}
-- Calculated Time (t₂): ${t2.toFixed(4)} ${timeUnit}
+- Value at t₂ (x₂): ${x2.toFixed(4)} ${unitX}
+- Calculated Initial Value (x₀): ${x0.toFixed(4)} ${unitX}
+- Time t₁: ${t1Norm.toFixed(4)} ${timeUnit}
+- Time t₂: ${t2Norm.toFixed(4)} ${timeUnit}
+  `;
 
-Verification Check:
-x₀ * e^(k * t₂) = ${(x0 * Math.exp(k * t2)).toFixed(4)} ${unitX}
-Expected x₂    = ${x2.toFixed(4)} ${unitX}
-    `;
-    promptContinue();
+  promptContinue();
 }
 
 function calculateGrowthDecayTime() {
