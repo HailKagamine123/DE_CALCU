@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'heat-cool':
                 switch (selectedCalculationType) {
                     case 'find-temp': calculateHeatTransferTemp(); break;
-                    case 'find-initial-temp': calculateHeatTransferInitialTemp(); break;
+                    case 'find-initial-temp': calculateHeatInitialTemp(); break;
                     case 'find-time': calculateHeatTransferTime(); break;
                 }
                 break;
