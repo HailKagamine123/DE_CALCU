@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Differential Equations Calculator</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -20,23 +21,29 @@
     <div id="calculatorSection" style="display:none;">
         <h2>Select Calculation Type</h2>
         
-        <select id="calcType">
-            <option value="">Select Calculation Type</option>
-            <option value="growth-decay">Growth and Decay</option>
-            <option value="heat-cool">Heat Transfer and Cooling</option>
-        </select>
+        <div class="input-group">
+            <label for="calcType">Calculation Type</label>
+            <select id="calcType">
+                <option value="">Select Calculation Type</option>
+                <option value="growth-decay">Growth and Decay</option>
+                <option value="heat-cool">Heat Transfer and Cooling</option>
+            </select>
+        </div>
 
         <div id="calculatorOptions" style="display:none;">
-            <h3 id="calculatorTitle">Select Calculation Variant</h3>
-            
-            <select id="calculationType">
-                <option value="">Select Calculation Variant</option>
-            </select>
+            <div class="input-group">
+                <label for="calculationType">Calculation Variant</label>
+                <select id="calculationType">
+                    <option value="">Select Calculation Variant</option>
+                </select>
+            </div>
 
             <div id="inputForm"></div>
 
-            <button id="calculateButton">Calculate</button>
-            <button id="graphButton">Graph Results</button>
+            <div>
+                <button id="calculateButton">Calculate</button>
+                <button id="graphButton">Graph Results</button>
+            </div>
         </div>
 
         <div id="graphContainer">
@@ -48,7 +55,6 @@
             <div id="resultText"></div>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
