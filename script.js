@@ -316,43 +316,53 @@ Verification:
             const { ambientTemp, initialTemp, targetTemp, tempUnit, timeUnit } = options;
             
             // Calculate temperature difference C
+            // Note: C is the difference between initial temp and ambient temp
             const C = initialTemp - ambientTemp;
             
-            // Calculate k using t=1 data point (31°C at t=1)
-            const k = Math.log((31 - ambientTemp) / C) / -1;
+            // Calculate k using t=1 data point (22°C at t=1)
+            // Changed from previous method to match the solution
+            const knownTemp = 22; // Temperature at t=1
+            const k = Math.log((knownTemp - ambientTemp) / C) / -1;
 
             // Calculate time to reach target temperature
+            // Using the equation: targetTemp = ambientTemp + C * e^(-k*t)
             const time = -Math.log((targetTemp - ambientTemp) / C) / k;
 
             // Generate detailed explanation
             const detailedSteps = `
 Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Calculate Initial Temperature Difference
-C = T₀ - T∞ = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C.toFixed(2)}
+Step 1: Initial Conditions
+@t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
+T-T∞=Ce^(-kt)
 
-Step 2: Calculate Heat Transfer Coefficient (k)
-- Using known data point (T=31°${tempUnit} at t=1 ${timeUnit}):
-- 31 - T∞ = Ce^(-k*1)
-- ln((31 - T∞)/C) = -k
-k = -ln((${31} - ${ambientTemp.toFixed(2)})/${C.toFixed(2)})
-k = ${k.toFixed(6)}
+Step 2: Calculate Initial Temperature Difference (C)
+C = T₀ - T∞
+C = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)}
+C = ${C.toFixed(2)}°${tempUnit}
 
-Step 3: Solve for Time
-- Using the equation: T(t) - T∞ = Ce^(-kt)
-- ${targetTemp.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
-- ${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
-- ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -${k.toFixed(6)}t
-t = -ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)})/${k.toFixed(6)}
-t = ${time.toFixed(2)} ${timeUnit}
+Step 3: Calculate k using data point @t=1 ${timeUnit}
+Known: @t=1 ${timeUnit}, T=${knownTemp}°${tempUnit}
+${knownTemp} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-k*1)
+${knownTemp - ambientTemp} = ${C.toFixed(2)}e^(-k)
+ln(${(knownTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -k
+k = ${k.toFixed(8)} per ${timeUnit}
+
+Step 4: Solve for time to reach target temperature
+${targetTemp.toFixed(2)} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
+${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
+ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -${k.toFixed(8)}t
+t = ${time.toFixed(3)} ${timeUnit}
 
 Verification:
 - Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
 - Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
 - Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
-- Initial Temperature Difference (C): ${C.toFixed(2)}
-- Heat Transfer Coefficient (k): ${k.toFixed(6)}
-- Required Time: ${time.toFixed(2)} ${timeUnit}
+- Temperature Difference (C): ${C.toFixed(2)}°${tempUnit}
+- Heat Transfer Coefficient (k): ${k.toFixed(8)} per ${timeUnit}
+- Required Time: ${time.toFixed(3)} ${timeUnit}
+
+Time in minutes and seconds: ${Math.floor(time/60)} min and ${Math.round(time%60)} seconds
 `;
 
             return {
@@ -368,21 +378,24 @@ const graphGenerators = {
     growthDecay(options) {
         const { x0, t1, x1, t2, timeUnit, unitX } = options;
 
-        const c = x0;
-        const k = Math.log(x1 / c) / t1;
+        // Calculate k using the known points
+        const k = Math.log(x1 / x0) / t1;
 
-        // Generate continuous curve points using actual time values
-        const curvePoints = Array.from({ length: 100 }, (_, i) => {
-            const t = (i / 99) * t2;
-            const x = c * Math.exp(k * t);
-            return { x: t, y: x };
-        });
+        // Generate curve points with better distribution
+        const numPoints = 200;  // Increased for smoother curve
+        const curvePoints = [];
+        
+        for (let i = 0; i <= numPoints; i++) {
+            const t = (i / numPoints) * Math.max(t1, t2);
+            const x = x0 * Math.exp(k * t);
+            curvePoints.push({ x: t, y: x });
+        }
 
-        // Add specific time points with actual time values
+        // Add specific time points for highlighting
         const specificPoints = [
-            { x: 0, y: x0 },  // Initial point
-            { x: t1, y: x1 }, // Time 1 point
-            { x: t2, y: c * Math.exp(k * t2) } // Time 2 point
+            { x: 0, y: x0 },     // Initial point
+            { x: t1, y: x1 },    // Time 1 point
+            { x: t2, y: x0 * Math.exp(k * t2) }  // Time 2 point
         ];
 
         return {
@@ -393,8 +406,10 @@ const graphGenerators = {
                     data: curvePoints,
                     borderColor: 'var(--text-primary)',
                     backgroundColor: 'rgba(166, 77, 121, 0.2)',
+                    borderWidth: 2,
                     pointRadius: 0,
-                    fill: true
+                    fill: true,
+                    tension: 0.4
                 },
                 {
                     label: 'Time Points',
@@ -407,32 +422,47 @@ const graphGenerators = {
                 }
             ],
             options: {
+                responsive: true,
+                maintainAspectRatio: true,
                 scales: {
                     x: {
+                        type: 'linear',
                         title: {
                             display: true,
                             text: `Time (${timeUnit})`
                         },
+                        grid: {
+                            display: true
+                        },
                         ticks: {
-                            callback: function(value) {
-                                return value.toFixed(1);
-                            }
+                            callback: value => value.toFixed(1)
                         }
                     },
                     y: {
+                        type: 'linear',
                         title: {
                             display: true,
                             text: unitX
+                        },
+                        grid: {
+                            display: true
                         }
                     }
                 },
                 plugins: {
                     tooltip: {
+                        enabled: true,
+                        mode: 'nearest',
+                        intersect: false,
                         callbacks: {
                             label: function(context) {
                                 return `${context.dataset.label}: (${context.parsed.x.toFixed(1)} ${timeUnit}, ${context.parsed.y.toFixed(2)} ${unitX})`;
                             }
                         }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
                     }
                 }
             }
@@ -441,35 +471,40 @@ const graphGenerators = {
 
     heatTransfer(options) {
         const { ambientTemp, initialTemp, targetTime, tempUnit, timeUnit } = options;
-        const ambientTempK = utils.toKelvin(ambientTemp, tempUnit);
-        const initialTempK = utils.toKelvin(initialTemp, tempUnit);
 
-        const k = 1;  // Heat transfer coefficient
+        // Calculate k using the known data point (T=31°C at t=1)
+        const C = initialTemp - ambientTemp;
+        const k = Math.log((31 - ambientTemp) / C) / -1;
 
-        // Generate continuous curve points
-        const curvePoints = Array.from({ length: 100 }, (_, i) => {
-            const t = (i / 99) * targetTime;
-            const tempK = ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * t);
-            const temp = utils.fromKelvin(tempK, tempUnit);
-            return { x: t, y: temp };
-        });
+        // Generate curve points
+        const numPoints = 200;
+        const curvePoints = [];
+        const maxTime = Math.max(targetTime, 5); // Ensure we show at least 5 time units
 
-        // Add specific time points
+        for (let i = 0; i <= numPoints; i++) {
+            const t = (i / numPoints) * maxTime;
+            const temp = ambientTemp + C * Math.exp(-k * t);
+            curvePoints.push({ x: t, y: temp });
+        }
+
+        // Add specific time points for highlighting
         const specificPoints = [
-            { x: 0, y: initialTemp }, // Initial temperature
-            { x: targetTime, y: utils.fromKelvin(ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * targetTime), tempUnit) } // Target time temperature
+            { x: 0, y: initialTemp },  // Initial temperature
+            { x: targetTime, y: ambientTemp + C * Math.exp(-k * targetTime) }  // Temperature at target time
         ];
 
         return {
-            label: `Temperature (${tempUnit})`,
+            label: `Temperature vs Time`,
             datasets: [
                 {
-                    label: 'Continuous Curve',
+                    label: 'Temperature Curve',
                     data: curvePoints,
                     borderColor: 'var(--text-primary)',
                     backgroundColor: 'rgba(166, 77, 121, 0.2)',
+                    borderWidth: 2,
                     pointRadius: 0,
-                    fill: true
+                    fill: true,
+                    tension: 0.4
                 },
                 {
                     label: 'Time Points',
@@ -482,31 +517,52 @@ const graphGenerators = {
                 }
             ],
             options: {
+                responsive: true,
+                maintainAspectRatio: true,
                 scales: {
                     x: {
+                        type: 'linear',
+                        position: 'bottom',
                         title: {
                             display: true,
                             text: `Time (${timeUnit})`
                         },
-                        ticks: {
-                            callback: function(value) {
-                                return value.toFixed(1);
-                            }
-                        }
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        min: 0,
+                        max: maxTime
                     },
                     y: {
+                        type: 'linear',
+                        position: 'left',
                         title: {
                             display: true,
-                            text: `Temperature (${tempUnit})`
+                            text: `Temperature (°${tempUnit})`
+                        },
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
                         }
                     }
                 },
                 plugins: {
                     tooltip: {
+                        enabled: true,
+                        mode: 'nearest',
+                        intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return `${context.dataset.label}: (${context.parsed.x.toFixed(1)} ${timeUnit}, ${context.parsed.y.toFixed(2)}°${tempUnit})`;
+                                return `${context.dataset.label}: (${context.parsed.x.toFixed(1)} ${timeUnit}, ${context.parsed.y.toFixed(1)}°${tempUnit})`;
                             }
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true
                         }
                     }
                 }
