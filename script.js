@@ -369,15 +369,41 @@ const graphGenerators = {
         const c = x0;
         const k = Math.log(x1 / c) / t1Norm;
 
-        const dataPoints = Array.from({ length: 21 }, (_, i) => {
-            const t = (i / 20) * t2Norm;
+        // Generate continuous curve points
+        const curvePoints = Array.from({ length: 100 }, (_, i) => {
+            const t = (i / 99) * Math.max(t1Norm, t2Norm);
             const x = c * Math.exp(k * t);
             return { x: t, y: x };
         });
 
+        // Add specific time points
+        const specificPoints = [
+            { x: 0, y: x0 },      // Initial point
+            { x: t1Norm, y: x1 }, // Time 1 point
+            { x: t2Norm, y: c * Math.exp(k * t2Norm) } // Time 2 point
+        ];
+
         return {
             label: `Growth/Decay (${unitX})`,
-            data: dataPoints,
+            datasets: [
+                {
+                    label: 'Continuous Curve',
+                    data: curvePoints,
+                    borderColor: 'var(--text-primary)',
+                    backgroundColor: 'rgba(166, 77, 121, 0.2)',
+                    pointRadius: 0,
+                    fill: true
+                },
+                {
+                    label: 'Time Points',
+                    data: specificPoints,
+                    borderColor: 'var(--text-primary)',
+                    backgroundColor: 'var(--text-primary)',
+                    pointRadius: 6,
+                    pointStyle: 'circle',
+                    showLine: false
+                }
+            ],
             timeUnit,
             unitX
         };
@@ -391,16 +417,41 @@ const graphGenerators = {
 
         const k = 1;
 
-        const dataPoints = Array.from({ length: 21 }, (_, i) => {
-            const t = (i / 20) * targetTimeNorm;
+        // Generate continuous curve points
+        const curvePoints = Array.from({ length: 100 }, (_, i) => {
+            const t = (i / 99) * targetTimeNorm;
             const tempK = ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * t);
             const temp = utils.fromKelvin(tempK, tempUnit);
             return { x: t, y: temp };
         });
 
+        // Add specific time points
+        const specificPoints = [
+            { x: 0, y: initialTemp }, // Initial temperature
+            { x: targetTimeNorm, y: utils.fromKelvin(ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * targetTimeNorm), tempUnit) } // Target time temperature
+        ];
+
         return {
             label: `Temperature (${tempUnit})`,
-            data: dataPoints,
+            datasets: [
+                {
+                    label: 'Continuous Curve',
+                    data: curvePoints,
+                    borderColor: 'var(--text-primary)',
+                    backgroundColor: 'rgba(166, 77, 121, 0.2)',
+                    pointRadius: 0,
+                    fill: true
+                },
+                {
+                    label: 'Time Points',
+                    data: specificPoints,
+                    borderColor: 'var(--text-primary)',
+                    backgroundColor: 'var(--text-primary)',
+                    pointRadius: 6,
+                    pointStyle: 'circle',
+                    showLine: false
+                }
+            ],
             timeUnit,
             tempUnit
         };
