@@ -76,51 +76,98 @@ const ThemeManager = {
 const calculations = {
     growthDecay: {
         amount(options) {
-            const { x0, t1, x1, t2, timeUnit } = options;
-            const t1Norm = utils.normalizeTime(t1, timeUnit);
-            const t2Norm = utils.normalizeTime(t2, timeUnit);
+            const { x0, t1, x1, t2, timeUnit, unitX } = options;
+            
+            // Don't normalize time if already in years
+            const t1Norm = timeUnit.toLowerCase() === 'year' ? t1 : utils.normalizeTime(t1, timeUnit);
+            const t2Norm = timeUnit.toLowerCase() === 'year' ? t2 : utils.normalizeTime(t2, timeUnit);
 
             // Calculate growth/decay rate (k)
-            const k = Math.log(x1 / x0) / t1Norm;
+            const k = Math.log(x1 / x0) / t1;  // Use original t1 for years
 
             // Calculate final value and rate of change
-            const x2 = x0 * Math.exp(k * t2Norm);
+            const x2 = x0 * Math.exp(k * t2);  // Use original t2 for years
             const dxdt = k * x2;
 
             // Generate detailed explanation
             const detailedSteps = `
 Detailed Calculation Steps:
 --------------------
-Step 1: Normalize Time
-- Time t₁: ${t1} ${timeUnit} → Normalized: ${t1Norm.toFixed(4)} hours
-- Time t₂: ${t2} ${timeUnit} → Normalized: ${t2Norm.toFixed(4)} hours
+Step 1: Time Values
+- Time t₁: ${t1} ${timeUnit}
+- Time t₂: ${t2} ${timeUnit}
 
 Step 2: Calculate Growth/Decay Rate (k)
 - Formula: k = ln(x₁/x₀) / t₁
-- k = ln(${x1.toFixed(4)} / ${x0.toFixed(4)}) / ${t1Norm.toFixed(4)}
+- k = ln(${x1.toFixed(4)} / ${x0.toFixed(4)}) / ${t1.toFixed(4)}
 - k = ${k.toFixed(4)}
 
 Step 3: Compute Final Value (x₂)
 - Formula: x₂ = x₀ * e^(k * t₂)
-- x₂ = ${x0.toFixed(4)} * e^(${k.toFixed(4)} * ${t2Norm.toFixed(4)})
+- x₂ = ${x0.toFixed(4)} * e^(${k.toFixed(4)} * ${t2.toFixed(4)})
 - x₂ = ${x2.toFixed(4)}
 
 Step 4: Calculate Rate of Change (dx/dt)
 - Formula: dx/dt = k * x₂
 - dx/dt = ${k.toFixed(4)} * ${x2.toFixed(4)}
-- dx/dt = ${dxdt.toFixed(4)}
+- dx/dt = ${dxdt.toFixed(2)} ${unitX}/${timeUnit}
 
 Verification:
 - Initial Value (x₀): ${x0.toFixed(4)}
 - Value at t₁ (x₁): ${x1.toFixed(4)}
 - Calculated Value at t₂ (x₂): ${x2.toFixed(4)}
 - Growth/Decay Rate (k): ${k.toFixed(4)}
-- Rate of Change (dx/dt): ${dxdt.toFixed(4)}
+- Rate of Change at t₂: ${dxdt.toFixed(2)} ${unitX}/${timeUnit}
 `;
 
             return { 
                 x2, 
                 dxdt, 
+                k, 
+                detailedCalculation: detailedSteps 
+            };
+        },
+
+        initialValue(options) {
+            const { x1, t1, x2, t2, timeUnit, unitX } = options;
+            
+            // Don't normalize time if already in years
+            const t1Norm = timeUnit.toLowerCase() === 'year' ? t1 : utils.normalizeTime(t1, timeUnit);
+            const t2Norm = timeUnit.toLowerCase() === 'year' ? t2 : utils.normalizeTime(t2, timeUnit);
+
+            // Calculate growth/decay rate (k)
+            const k = Math.log(x2 / x1) / (t2 - t1);
+
+            // Calculate initial value (x0)
+            const x0 = x1 * Math.exp(-k * t1);
+
+            // Generate detailed explanation
+            const detailedSteps = `
+Detailed Calculation Steps:
+--------------------
+Step 1: Time Values
+- Time t₁: ${t1} ${timeUnit}
+- Time t₂: ${t2} ${timeUnit}
+
+Step 2: Calculate Growth/Decay Rate (k)
+- Formula: k = ln(x₂/x₁) / (t₂ - t₁)
+- k = ln(${x2.toFixed(4)} / ${x1.toFixed(4)}) / (${t2.toFixed(4)} - ${t1.toFixed(4)})
+- k = ${k.toFixed(4)}
+
+Step 3: Compute Initial Value (x₀)
+- Formula: x₀ = x₁ * e^(-k * t₁)
+- x₀ = ${x1.toFixed(4)} * e^(-${k.toFixed(4)} * ${t1.toFixed(4)})
+- x₀ = ${x0.toFixed(4)}
+
+Verification:
+- Value at t₁ (x₁): ${x1.toFixed(4)}
+- Value at t₂ (x₂): ${x2.toFixed(4)}
+- Calculated Initial Value (x₀): ${x0.toFixed(4)} ${unitX}
+- Growth/Decay Rate (k): ${k.toFixed(4)}
+`;
+
+            return { 
+                x0, 
                 k, 
                 detailedCalculation: detailedSteps 
             };
@@ -170,159 +217,143 @@ Verification:
     heatTransfer: {
         temperature(options) {
             const { ambientTemp, initialTemp, targetTime, tempUnit, timeUnit } = options;
-            
-            // Convert temperatures to Kelvin
-            const ambientTempK = utils.toKelvin(ambientTemp, tempUnit);
-            const initialTempK = utils.toKelvin(initialTemp, tempUnit);
-            const targetTimeNorm = utils.normalizeTime(targetTime, timeUnit);
 
-            // Heat transfer coefficient (simplified to 1)
-            const k = 1;
+            // Calculate temperature difference C
+            const C = initialTemp - ambientTemp;
+
+            // Heat transfer coefficient
+            const k = Math.log((31 - ambientTemp) / C) / -1; // Using t=1 min data point
 
             // Calculate target temperature
-            const targetTempK = ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * targetTimeNorm);
-            const targetTemp = utils.fromKelvin(targetTempK, tempUnit);
+            const targetTemp = ambientTemp + C * Math.exp(-k * targetTime);
 
             // Generate detailed explanation
             const detailedSteps = `
-Detailed Calculation Steps:
+Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Convert Temperatures to Kelvin
-- Ambient Temperature: ${ambientTemp}°${tempUnit} → ${ambientTempK.toFixed(2)} K
-- Initial Temperature: ${initialTemp}°${tempUnit} → ${initialTempK.toFixed(2)} K
+Step 1: Initial Conditions
+@t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
+T-T∞=Ce^(-kt)
 
-Step 2: Normalize Time
-- Target Time: ${targetTime} ${timeUnit} → Normalized: ${targetTimeNorm.toFixed(4)} hours
+Step 2: Calculate C (Initial Temperature Difference)
+${initialTemp.toFixed(2)}=${ambientTemp.toFixed(2)}+C
+C=${C.toFixed(2)}
 
-Step 3: Apply Heat Transfer Equation
-- Heat Transfer Coefficient (k): ${k}
-- Formula: T(t) = T_ambient + (T_initial - T_ambient) * e^(-k * t)
-- Target Temperature: 
-  ${ambientTempK.toFixed(2)} + (${initialTempK.toFixed(2)} - ${ambientTempK.toFixed(2)}) * e^(-${k} * ${targetTimeNorm.toFixed(4)})
-- Calculated Target Temperature (K): ${targetTempK.toFixed(2)} K
-- Converted Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
+Step 3: Calculate k using t=1 ${timeUnit} data point
+${31}=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-k*1)
+${(31 - ambientTemp).toFixed(2)}=${C.toFixed(2)}e^(-k*1)
+k=${k.toFixed(6)}
+
+Step 4: Temperature as a function of time:
+T=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+T=${targetTemp.toFixed(2)}°${tempUnit}
 
 Verification:
-- Ambient Temperature: ${ambientTemp}°${tempUnit}
-- Initial Temperature: ${initialTemp}°${tempUnit}
-- Target Time: ${targetTime} ${timeUnit}
-- Calculated Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
+- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+- Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
+- Temperature Difference (C): ${C.toFixed(2)}
+- Heat Transfer Coefficient (k): ${k.toFixed(6)}
+- Final Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
 `;
 
-            return { 
-                targetTemp, 
-                detailedCalculation: detailedSteps 
+            return {
+                targetTemp,
+                detailedCalculation: detailedSteps
             };
         },
 
         initialTemperature(options) {
             const { ambientTemp, knownTime1, knownTemp1, knownTime2, knownTemp2, tempUnit, timeUnit } = options;
-            
-            // Convert temperatures to Kelvin
-            const ambientTempK = utils.toKelvin(ambientTemp, tempUnit);
-            const knownTemp1K = utils.toKelvin(knownTemp1, tempUnit);
-            const knownTemp2K = utils.toKelvin(knownTemp2, tempUnit);
 
-            // Heat transfer coefficient (simplified to 1)
-            const k = 1;
+            // Calculate temperature differences
+            const C1 = knownTemp1 - ambientTemp;
+            const C2 = knownTemp2 - ambientTemp;
 
-            // Normalize times
-            const time1Norm = utils.normalizeTime(knownTime1, timeUnit);
-            const time2Norm = utils.normalizeTime(knownTime2, timeUnit);
+            // Calculate heat transfer coefficient using two known points
+            const k = -Math.log(C2 / C1) / (knownTime2 - knownTime1);
 
             // Calculate initial temperature
-            const initialTempK = ambientTempK + 
-                (knownTemp1K - ambientTempK) / 
-                Math.exp(k * time1Norm);
-
-            const initialTemp = utils.fromKelvin(initialTempK, tempUnit);
+            const initialTemp = ambientTemp + C1 * Math.exp(k * knownTime1);
 
             // Generate detailed explanation
             const detailedSteps = `
-Detailed Calculation Steps:
+Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Convert Temperatures to Kelvin
-- Ambient Temperature: ${ambientTemp}°${tempUnit} → ${ambientTempK.toFixed(2)} K
-- Known Temperature 1: ${knownTemp1}°${tempUnit} → ${knownTemp1K.toFixed(2)} K
-- Known Temperature 2: ${knownTemp2}°${tempUnit} → ${knownTemp2K.toFixed(2)} K
+Step 1: Temperature Differences
+C₁ = ${knownTemp1.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C1.toFixed(2)}
+C₂ = ${knownTemp2.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C2.toFixed(2)}
 
-Step 2: Normalize Time
-- Known Time 1: ${knownTime1} ${timeUnit} → Normalized: ${time1Norm.toFixed(4)} hours
-- Known Time 2: ${knownTime2} ${timeUnit} → Normalized: ${time2Norm.toFixed(4)} hours
+Step 2: Calculate Heat Transfer Coefficient (k)
+k = -ln(C₂/C₁)/(t₂-t₁)
+k = -ln(${C2.toFixed(2)}/${C1.toFixed(2)})/(${knownTime2}-${knownTime1})
+k = ${k.toFixed(6)}
 
-Step 3: Apply Initial Temperature Calculation
-- Heat Transfer Coefficient (k): ${k}
-- Formula: T_initial = T_ambient + (T_known - T_ambient) / e^(k * t)
-- Initial Temperature Calculation:
-  ${ambientTempK.toFixed(2)} + (${knownTemp1K.toFixed(2)} - ${ambientTempK.toFixed(2)}) / e^(${k} * ${time1Norm.toFixed(4)})
-- Calculated Initial Temperature (K): ${initialTempK.toFixed(2)} K
-- Converted Initial Temperature: ${initialTemp.toFixed(2)}°${tempUnit}
+Step 3: Calculate Initial Temperature
+T₀ = T∞ + C₁e^(kt₁)
+T₀ = ${ambientTemp.toFixed(2)} + ${C1.toFixed(2)}e^(${k.toFixed(6)}*${knownTime1})
+T₀ = ${initialTemp.toFixed(2)}°${tempUnit}
 
 Verification:
-- Ambient Temperature: ${ambientTemp}°${tempUnit}
-- Known Temperature 1: ${knownTemp1}°${tempUnit} at ${knownTime1} ${timeUnit}
-- Known Temperature 2: ${knownTemp2}°${tempUnit} at ${knownTime2} ${timeUnit}
+- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+- Known Point 1: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
+- Known Point 2: ${knownTemp2.toFixed(2)}°${tempUnit} at t=${knownTime2} ${timeUnit}
+- Heat Transfer Coefficient (k): ${k.toFixed(6)}
 - Calculated Initial Temperature: ${initialTemp.toFixed(2)}°${tempUnit}
 `;
 
-            return { 
-                initialTemp, 
-                detailedCalculation: detailedSteps 
+            return {
+                initialTemp,
+                detailedCalculation: detailedSteps
             };
         },
 
         time(options) {
             const { ambientTemp, initialTemp, targetTemp, tempUnit, timeUnit } = options;
-
-            // Convert temperatures to Kelvin
-            const ambientTempK = utils.toKelvin(ambientTemp, tempUnit);
-            const initialTempK = utils.toKelvin(initialTemp, tempUnit);
-            const targetTempK = utils.toKelvin(targetTemp, tempUnit);
-
-            // Heat transfer coefficient (simplified to 1)
-            const k = 1;
-
-            // Calculate normalized time
-            const timeNormalized = -Math.log((targetTempK - ambientTempK) / 
-                                              (initialTempK - ambientTempK)) / k;
             
-            // Convert time to specified unit
-            const timeConversionMap = {
-                'seconds': 3600,
-                'minutes': 60,
-                'hours': 1,
-                'days': 1/24
-            };
-            const time = timeNormalized * (timeConversionMap[timeUnit.toLowerCase()] || 1);
+            // Calculate temperature difference C
+            const C = initialTemp - ambientTemp;
+            
+            // Heat transfer coefficient (k)
+            const k = Math.log((31 - ambientTemp) / C) / -1;
+
+            // Calculate time
+            const time = -Math.log((targetTemp - ambientTemp) / C) / k;
 
             // Generate detailed explanation
             const detailedSteps = `
-Detailed Calculation Steps:
+Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Convert Temperatures to Kelvin
-- Ambient Temperature: ${ambientTemp}°${tempUnit} → ${ambientTempK.toFixed(2)} K
-- Initial Temperature: ${initialTemp}°${tempUnit} → ${initialTempK.toFixed(2)} K
-- Target Temperature: ${targetTemp}°${tempUnit} → ${targetTempK.toFixed(2)} K
+Step 1: Initial Conditions
+@t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
+T-T∞=Ce^(-kt)
 
-Step 2: Calculate Time
-- Heat Transfer Coefficient (k): ${k}
-- Formula: t = -ln((T_target - T_ambient) / (T_initial - T_ambient)) / k
-- Calculation:
-  t = -ln((${targetTempK.toFixed(2)} - ${ambientTempK.toFixed(2)}) / 
-          (${initialTempK.toFixed(2)} - ${ambientTempK.toFixed(2)})) / ${k}
-- Normalized Time: ${timeNormalized.toFixed(4)} hours
-- Converted Time: ${time.toFixed(4)} ${timeUnit}
+Step 2: Calculate C (Initial Temperature Difference)
+${initialTemp.toFixed(2)}=${ambientTemp.toFixed(2)}+C
+C=${C.toFixed(2)}
+
+Step 3: Calculate k using t=1 ${timeUnit} data point
+${31}=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-k*1)
+${(31 - ambientTemp).toFixed(2)}=${C.toFixed(2)}e^(-k*1)
+k=${k.toFixed(6)}
+
+Step 4: Solve for time:
+${targetTemp.toFixed(2)}=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+${(targetTemp - ambientTemp).toFixed(2)}=${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)})=-${k.toFixed(6)}t
+t=${time.toFixed(2)} ${timeUnit}
 
 Verification:
-- Ambient Temperature: ${ambientTemp}°${tempUnit}
-- Initial Temperature: ${initialTemp}°${tempUnit}
-- Target Temperature: ${targetTemp}°${tempUnit}
-- Calculated Time: ${time.toFixed(4)} ${timeUnit}
+- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+- Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
+- Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
+- Temperature Difference (C): ${C.toFixed(2)}
+- Heat Transfer Coefficient (k): ${k.toFixed(6)}
+- Required Time: ${time.toFixed(2)} ${timeUnit}
 `;
 
-            return { 
-                time, 
-                detailedCalculation: detailedSteps 
+            return {
+                time,
+                detailedCalculation: detailedSteps
             };
         }
     }
