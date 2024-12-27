@@ -265,32 +265,37 @@ Verification:
         initialTemperature(options) {
             const { ambientTemp, knownTime1, knownTemp1, knownTime2, knownTemp2, tempUnit, timeUnit } = options;
 
-            // Calculate temperature differences
+            // Calculate temperature differences for both known points
             const C1 = knownTemp1 - ambientTemp;
             const C2 = knownTemp2 - ambientTemp;
 
-            // Calculate heat transfer coefficient using two known points
+            // Calculate k using the ratio of the two points
             const k = -Math.log(C2 / C1) / (knownTime2 - knownTime1);
 
-            // Calculate initial temperature
+            // Calculate initial temperature using point 1
             const initialTemp = ambientTemp + C1 * Math.exp(k * knownTime1);
 
             // Generate detailed explanation
             const detailedSteps = `
 Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Temperature Differences
-C₁ = ${knownTemp1.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C1.toFixed(2)}
-C₂ = ${knownTemp2.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C2.toFixed(2)}
+Step 1: Calculate Temperature Differences
+C₁ = T₁ - T∞ = ${knownTemp1.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C1.toFixed(2)}
+C₂ = T₂ - T∞ = ${knownTemp2.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C2.toFixed(2)}
 
 Step 2: Calculate Heat Transfer Coefficient (k)
-k = -ln(C₂/C₁)/(t₂-t₁)
-k = -ln(${C2.toFixed(2)}/${C1.toFixed(2)})/(${knownTime2}-${knownTime1})
+- Using the ratio of two known points:
+- T₁ - T∞ = C₁e^(-k*t₁)
+- T₂ - T∞ = C₁e^(-k*t₂)
+- (T₂ - T∞)/(T₁ - T∞) = e^(-k(t₂-t₁))
+- k = -ln((T₂ - T∞)/(T₁ - T∞))/(t₂-t₁)
+k = -ln(${C2.toFixed(4)}/${C1.toFixed(4)})/(${knownTime2} - ${knownTime1})
 k = ${k.toFixed(6)}
 
 Step 3: Calculate Initial Temperature
-T₀ = T∞ + C₁e^(kt₁)
-T₀ = ${ambientTemp.toFixed(2)} + ${C1.toFixed(2)}e^(${k.toFixed(6)}*${knownTime1})
+- Using point 1:
+T₀ = T∞ + (T₁ - T∞)e^(kt₁)
+T₀ = ${ambientTemp.toFixed(2)} + ${C1.toFixed(2)} * e^(${k.toFixed(6)} * ${knownTime1})
 T₀ = ${initialTemp.toFixed(2)}°${tempUnit}
 
 Verification:
@@ -313,40 +318,39 @@ Verification:
             // Calculate temperature difference C
             const C = initialTemp - ambientTemp;
             
-            // Heat transfer coefficient (k)
+            // Calculate k using t=1 data point (31°C at t=1)
             const k = Math.log((31 - ambientTemp) / C) / -1;
 
-            // Calculate time
+            // Calculate time to reach target temperature
             const time = -Math.log((targetTemp - ambientTemp) / C) / k;
 
             // Generate detailed explanation
             const detailedSteps = `
 Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Initial Conditions
-@t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
-T-T∞=Ce^(-kt)
+Step 1: Calculate Initial Temperature Difference
+C = T₀ - T∞ = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C.toFixed(2)}
 
-Step 2: Calculate C (Initial Temperature Difference)
-${initialTemp.toFixed(2)}=${ambientTemp.toFixed(2)}+C
-C=${C.toFixed(2)}
+Step 2: Calculate Heat Transfer Coefficient (k)
+- Using known data point (T=31°${tempUnit} at t=1 ${timeUnit}):
+- 31 - T∞ = Ce^(-k*1)
+- ln((31 - T∞)/C) = -k
+k = -ln((${31} - ${ambientTemp.toFixed(2)})/${C.toFixed(2)})
+k = ${k.toFixed(6)}
 
-Step 3: Calculate k using t=1 ${timeUnit} data point
-${31}=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-k*1)
-${(31 - ambientTemp).toFixed(2)}=${C.toFixed(2)}e^(-k*1)
-k=${k.toFixed(6)}
-
-Step 4: Solve for time:
-${targetTemp.toFixed(2)}=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-${k.toFixed(6)}t)
-${(targetTemp - ambientTemp).toFixed(2)}=${C.toFixed(2)}e^(-${k.toFixed(6)}t)
-ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)})=-${k.toFixed(6)}t
-t=${time.toFixed(2)} ${timeUnit}
+Step 3: Solve for Time
+- Using the equation: T(t) - T∞ = Ce^(-kt)
+- ${targetTemp.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+- ${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+- ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -${k.toFixed(6)}t
+t = -ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)})/${k.toFixed(6)}
+t = ${time.toFixed(2)} ${timeUnit}
 
 Verification:
 - Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
 - Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
 - Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
-- Temperature Difference (C): ${C.toFixed(2)}
+- Initial Temperature Difference (C): ${C.toFixed(2)}
 - Heat Transfer Coefficient (k): ${k.toFixed(6)}
 - Required Time: ${time.toFixed(2)} ${timeUnit}
 `;
