@@ -363,24 +363,22 @@ Verification:
 const graphGenerators = {
     growthDecay(options) {
         const { x0, t1, x1, t2, timeUnit, unitX } = options;
-        const t1Norm = utils.normalizeTime(t1, timeUnit);
-        const t2Norm = utils.normalizeTime(t2, timeUnit);
 
         const c = x0;
-        const k = Math.log(x1 / c) / t1Norm;
+        const k = Math.log(x1 / c) / t1;
 
-        // Generate continuous curve points
+        // Generate continuous curve points using actual time values
         const curvePoints = Array.from({ length: 100 }, (_, i) => {
-            const t = (i / 99) * Math.max(t1Norm, t2Norm);
+            const t = (i / 99) * t2;
             const x = c * Math.exp(k * t);
             return { x: t, y: x };
         });
 
-        // Add specific time points
+        // Add specific time points with actual time values
         const specificPoints = [
-            { x: 0, y: x0 },      // Initial point
-            { x: t1Norm, y: x1 }, // Time 1 point
-            { x: t2Norm, y: c * Math.exp(k * t2Norm) } // Time 2 point
+            { x: 0, y: x0 },  // Initial point
+            { x: t1, y: x1 }, // Time 1 point
+            { x: t2, y: c * Math.exp(k * t2) } // Time 2 point
         ];
 
         return {
@@ -404,8 +402,36 @@ const graphGenerators = {
                     showLine: false
                 }
             ],
-            timeUnit,
-            unitX
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: `Time (${timeUnit})`
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(1);
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: unitX
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: (${context.parsed.x.toFixed(1)} ${timeUnit}, ${context.parsed.y.toFixed(2)} ${unitX})`;
+                            }
+                        }
+                    }
+                }
+            }
         };
     },
 
@@ -413,13 +439,12 @@ const graphGenerators = {
         const { ambientTemp, initialTemp, targetTime, tempUnit, timeUnit } = options;
         const ambientTempK = utils.toKelvin(ambientTemp, tempUnit);
         const initialTempK = utils.toKelvin(initialTemp, tempUnit);
-        const targetTimeNorm = utils.normalizeTime(targetTime, timeUnit);
 
-        const k = 1;
+        const k = 1;  // Heat transfer coefficient
 
         // Generate continuous curve points
         const curvePoints = Array.from({ length: 100 }, (_, i) => {
-            const t = (i / 99) * targetTimeNorm;
+            const t = (i / 99) * targetTime;
             const tempK = ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * t);
             const temp = utils.fromKelvin(tempK, tempUnit);
             return { x: t, y: temp };
@@ -428,7 +453,7 @@ const graphGenerators = {
         // Add specific time points
         const specificPoints = [
             { x: 0, y: initialTemp }, // Initial temperature
-            { x: targetTimeNorm, y: utils.fromKelvin(ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * targetTimeNorm), tempUnit) } // Target time temperature
+            { x: targetTime, y: utils.fromKelvin(ambientTempK + (initialTempK - ambientTempK) * Math.exp(-k * targetTime), tempUnit) } // Target time temperature
         ];
 
         return {
@@ -452,8 +477,36 @@ const graphGenerators = {
                     showLine: false
                 }
             ],
-            timeUnit,
-            tempUnit
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: `Time (${timeUnit})`
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(1);
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: `Temperature (${tempUnit})`
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: (${context.parsed.x.toFixed(1)} ${timeUnit}, ${context.parsed.y.toFixed(2)}°${tempUnit})`;
+                            }
+                        }
+                    }
+                }
+            }
         };
     }
 };
@@ -486,30 +539,14 @@ const UIManager = {
         new Chart(ctx, {
             type: 'line',
             data: {
-                datasets: [{
-                    label: graphData.label,
-                    data: graphData.data,
-                    borderColor: 'var(--text-primary)',
-                    backgroundColor: 'rgba(166, 77, 121, 0.2)',
-                }]
+                datasets: graphData.datasets
             },
             options: {
                 responsive: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: `Time (${graphData.timeUnit})`
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: graphData.unitX || graphData.tempUnit
-                        }
-                    }
+                ...graphData.options,
+                interaction: {
+                    intersect: false,
+                    mode: 'nearest'
                 }
             }
         });
