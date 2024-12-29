@@ -306,57 +306,53 @@ Verification:
 
         time(options) {
             const { ambientTemp, initialTemp, targetTemp, tempUnit, timeUnit } = options;
-            
+        
             // Calculate temperature difference C
-            // Note: C is the difference between initial temp and ambient temp
             const C = initialTemp - ambientTemp;
             
-            // Calculate k using t=1 data point (22°C at t=1)
-            // Changed from previous method to match the solution
-            const knownTemp = 22; // Temperature at t=1
-            const k = Math.log((knownTemp - ambientTemp) / C) / -1;
-
+            // Calculate k using the known data point at t=1 min
+            // Using the same method as in other heat transfer functions
+            const k = Math.log((31 - ambientTemp) / C) / -1;
+            
             // Calculate time to reach target temperature
-            // Using the equation: targetTemp = ambientTemp + C * e^(-k*t)
             const time = -Math.log((targetTemp - ambientTemp) / C) / k;
-
+        
             // Generate detailed explanation
             const detailedSteps = `
-Detailed Heat Transfer Calculation:
---------------------
-Step 1: Initial Conditions
-@t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
-T-T∞=Ce^(-kt)
-
-Step 2: Calculate Initial Temperature Difference (C)
-C = T₀ - T∞
-C = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)}
-C = ${C.toFixed(2)}°${tempUnit}
-
-Step 3: Calculate k using data point @t=1 ${timeUnit}
-Known: @t=1 ${timeUnit}, T=${knownTemp}°${tempUnit}
-${knownTemp} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-k*1)
-${knownTemp - ambientTemp} = ${C.toFixed(2)}e^(-k)
-ln(${(knownTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -k
-k = ${k.toFixed(8)} per ${timeUnit}
-
-Step 4: Solve for time to reach target temperature
-${targetTemp.toFixed(2)} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
-${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
-ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -${k.toFixed(8)}t
-t = ${time.toFixed(3)} ${timeUnit}
-
-Verification:
-- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
-- Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
-- Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
-- Temperature Difference (C): ${C.toFixed(2)}°${tempUnit}
-- Heat Transfer Coefficient (k): ${k.toFixed(8)} per ${timeUnit}
-- Required Time: ${time.toFixed(3)} ${timeUnit}
-
-Time in minutes and seconds: ${Math.floor(time/60)} min and ${Math.round(time%60)} seconds
-`;
-
+        Detailed Heat Transfer Calculation:
+        --------------------
+        Step 1: Initial Conditions
+        @t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
+        T-T∞=Ce^(-kt)
+        
+        Step 2: Calculate Initial Temperature Difference (C)
+        C = T₀ - T∞
+        C = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)}
+        C = ${C.toFixed(2)}°${tempUnit}
+        
+        Step 3: Calculate k using data point @t=1 ${timeUnit}
+        Known: @t=1 ${timeUnit}, T=31°${tempUnit}
+        31 = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-k*1)
+        ${(31 - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-k)
+        k = ${k.toFixed(8)} per ${timeUnit}
+        
+        Step 4: Solve for time to reach target temperature
+        ${targetTemp.toFixed(2)} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
+        ${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
+        ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -${k.toFixed(8)}t
+        t = ${time.toFixed(3)} ${timeUnit}
+        
+        Verification:
+        - Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+        - Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
+        - Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
+        - Temperature Difference (C): ${C.toFixed(2)}°${tempUnit}
+        - Heat Transfer Coefficient (k): ${k.toFixed(8)} per ${timeUnit}
+        - Required Time: ${time.toFixed(3)} ${timeUnit}
+        
+        Time in minutes and seconds: ${Math.floor(time)} min and ${Math.round((time % 1) * 60)} seconds
+        `;
+        
             return {
                 time,
                 detailedCalculation: detailedSteps
