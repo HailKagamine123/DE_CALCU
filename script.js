@@ -78,18 +78,16 @@ const calculations = {
         amount(options) {
             const { x0, t1, x1, t2, timeUnit, unitX } = options;
             
-            // Don't normalize time if already in years
-            const t1Norm = timeUnit.toLowerCase() === 'year' ? t1 : utils.normalizeTime(t1, timeUnit);
-            const t2Norm = timeUnit.toLowerCase() === 'year' ? t2 : utils.normalizeTime(t2, timeUnit);
-
-            // Calculate growth/decay rate (k)
-            const k = Math.log(x1 / x0) / t1;  // Use original t1 for years
-
-            // Calculate final value and rate of change
-            const x2 = x0 * Math.exp(k * t2);  // Use original t2 for years
+            // Calculate k using Python's method
+            const k = Math.log(x1 / x0) / t1;
+            
+            // Calculate final value using x = ce^kt where c = x0
+            const x2 = x0 * Math.exp(k * t2);
+            
+            // Calculate rate of change
             const dxdt = k * x2;
 
-            // Generate detailed explanation
+            // Keep original output format exactly as it was
             const detailedSteps = `
 Detailed Calculation Steps:
 --------------------
@@ -131,17 +129,13 @@ Verification:
         initialValue(options) {
             const { x1, t1, x2, t2, timeUnit, unitX } = options;
             
-            // Don't normalize time if already in years
-            const t1Norm = timeUnit.toLowerCase() === 'year' ? t1 : utils.normalizeTime(t1, timeUnit);
-            const t2Norm = timeUnit.toLowerCase() === 'year' ? t2 : utils.normalizeTime(t2, timeUnit);
+            // Calculate k using ratio method from Python
+            const k = Math.log(x1 / x2) / (t1 - t2);
+            
+            // Calculate initial value using point 1
+            const x0 = x1 / Math.exp(k * t1);
 
-            // Calculate growth/decay rate (k)
-            const k = Math.log(x2 / x1) / (t2 - t1);
-
-            // Calculate initial value (x0)
-            const x0 = x1 * Math.exp(-k * t1);
-
-            // Generate detailed explanation
+            // Keep original output format
             const detailedSteps = `
 Detailed Calculation Steps:
 --------------------
@@ -150,13 +144,13 @@ Step 1: Time Values
 - Time t₂: ${t2} ${timeUnit}
 
 Step 2: Calculate Growth/Decay Rate (k)
-- Formula: k = ln(x₂/x₁) / (t₂ - t₁)
-- k = ln(${x2.toFixed(4)} / ${x1.toFixed(4)}) / (${t2.toFixed(4)} - ${t1.toFixed(4)})
+- Formula: k = ln(x₁/x₂) / (t₁ - t₂)
+- k = ln(${x1.toFixed(4)} / ${x2.toFixed(4)}) / (${t1.toFixed(4)} - ${t2.toFixed(4)})
 - k = ${k.toFixed(4)}
 
 Step 3: Compute Initial Value (x₀)
-- Formula: x₀ = x₁ * e^(-k * t₁)
-- x₀ = ${x1.toFixed(4)} * e^(-${k.toFixed(4)} * ${t1.toFixed(4)})
+- Formula: x₀ = x₁ / e^(k * t₁)
+- x₀ = ${x1.toFixed(4)} / e^(${k.toFixed(4)} * ${t1.toFixed(4)})
 - x₀ = ${x0.toFixed(4)}
 
 Verification:
@@ -175,25 +169,23 @@ Verification:
 
         time(options) {
             const { x0, x1, t1, x2, timeUnit } = options;
-            const t1Norm = utils.normalizeTime(t1, timeUnit);
-
-            // Calculate growth/decay rate (k)
-            const k = Math.log(x1 / x0) / t1Norm;
-
-            // Calculate time
+            
+            // Calculate k using Python's method
+            const k = Math.log(x1 / x0) / t1;
+            
+            // Calculate time using Python's method
             const t2 = Math.log(x2 / x0) / k;
 
-            // Generate detailed explanation
+            // Keep original output format
             const detailedSteps = `
 Detailed Calculation Steps:
 --------------------
 Step 1: Calculate Growth/Decay Rate (k)
 - Formula: k = ln(x₁/x₀) / t₁
-- t₁: ${t1} ${timeUnit} (Normalized: ${t1Norm.toFixed(4)} hours)
-- k = ln(${x1.toFixed(4)} / ${x0.toFixed(4)}) / ${t1Norm.toFixed(4)}
+- k = ln(${x1.toFixed(4)} / ${x0.toFixed(4)}) / ${t1.toFixed(4)}
 - k = ${k.toFixed(4)}
 
-Step 2: Compute Time (t₂)
+Step 2: Compute Required Time (t₂)
 - Formula: t₂ = ln(x₂/x₀) / k
 - t₂ = ln(${x2.toFixed(4)} / ${x0.toFixed(4)}) / ${k.toFixed(4)}
 - t₂ = ${t2.toFixed(4)} ${timeUnit}
@@ -201,9 +193,9 @@ Step 2: Compute Time (t₂)
 Verification:
 - Initial Value (x₀): ${x0.toFixed(4)}
 - Value at t₁ (x₁): ${x1.toFixed(4)}
-- Final Value (x₂): ${x2.toFixed(4)}
+- Target Value (x₂): ${x2.toFixed(4)}
 - Growth/Decay Rate (k): ${k.toFixed(4)}
-- Calculated Time (t₂): ${t2.toFixed(4)} ${timeUnit}
+- Required Time (t₂): ${t2.toFixed(4)} ${timeUnit}
 `;
 
             return { 
@@ -372,6 +364,161 @@ Time in minutes and seconds: ${Math.floor(time/60)} min and ${Math.round(time%60
         }
     }
 };
+
+//Input Functions
+function handleCalculation(event) {
+    event.preventDefault();
+    
+    // Reset previous results and graph
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('graphContainer').style.display = 'none';
+    
+    // Reset global graph data
+    currentGraphData = null;
+
+    const calcType = document.getElementById('calcType').value;
+    const calculationType = document.getElementById('calculationType').value;
+
+    // Collect input values dynamically
+    const inputs = Array.from(document.getElementById('inputForm').querySelectorAll('input, select'))
+        .map(input => ({
+            id: input.id,
+            element: input,
+            value: input.type === 'number' ? parseFloat(input.value) : input.value
+        }));
+
+    // Validate inputs
+    if (!utils.validateNumericInputs(inputs.filter(input => input.element.type === 'number'))) {
+        alert('Please fill in all numeric fields with valid numbers.');
+        return;
+    }
+
+    try {
+        let result, graphData;
+
+        // Growth and Decay Calculations
+        if (calcType === 'growth-decay') {
+            const inputMap = Object.fromEntries(inputs.map(input => [input.id, input.value]));
+            
+            switch (calculationType) {
+                case 'find-amount':
+                    // Match Python inputs
+                    result = calculations.growthDecay.amount({
+                        x0: inputMap['initialValue'],  // x0 - initial value
+                        t1: inputMap['time1'],         // t1 - time for x1
+                        x1: inputMap['value1'],        // x1 - amount at time t1
+                        t2: inputMap['time2'],         // t2 - target time
+                        timeUnit: inputMap['timeUnit'],
+                        unitX: inputMap['unitX']
+                    });
+                    break;
+                
+                case 'find-initial':
+                    // Match Python inputs for initial value calculation
+                    result = calculations.growthDecay.initialValue({
+                        x1: inputMap['value1'],        // x1 - amount at time t1
+                        t1: inputMap['time1'],         // t1 - first time
+                        x2: inputMap['value2'],        // x2 - amount at time t2
+                        t2: inputMap['time2'],         // t2 - second time
+                        timeUnit: inputMap['timeUnit'],
+                        unitX: inputMap['unitX']
+                    });
+                    break;
+                
+                case 'find-time':
+                    // Match Python inputs for time calculation
+                    result = calculations.growthDecay.time({
+                        x0: inputMap['initialValue'],  // x0 - initial value
+                        x1: inputMap['value1'],        // x1 - amount at time t1
+                        t1: inputMap['time1'],         // t1 - known time
+                        x2: inputMap['targetValue'],   // x2 - target value
+                        timeUnit: inputMap['timeUnit']
+                    });
+                    break;
+            }
+        }
+        
+        // Heat Transfer Calculations
+        else if (calcType === 'heat-cool') {
+            const inputMap = Object.fromEntries(inputs.map(input => [input.id, input.value]));
+            
+            switch (calculationType) {
+                case 'find-temp':
+                    result = calculations.heatTransfer.temperature({
+                        ambientTemp: inputMap['ambientTemp'],
+                        initialTemp: inputMap['initialTemp'],
+                        targetTime: inputMap['targetTime'],
+                        tempUnit: inputMap['tempUnit'],
+                        timeUnit: inputMap['timeUnit']
+                    });
+                    graphData = graphGenerators.heatTransfer({
+                        ambientTemp: inputMap['ambientTemp'],
+                        initialTemp: inputMap['initialTemp'],
+                        targetTime: inputMap['targetTime'],
+                        tempUnit: inputMap['tempUnit'],
+                        timeUnit: inputMap['timeUnit']
+                    });
+                    break;
+                
+                case 'find-initial-temp':
+                    result = calculations.heatTransfer.initialTemperature({
+                        ambientTemp: inputMap['ambientTemp'],
+                        knownTime1: inputMap['knownTime1'],
+                        knownTemp1: inputMap['knownTemp1'],
+                        knownTime2: inputMap['knownTime2'],
+                        knownTemp2: inputMap['knownTemp2'],
+                        tempUnit: inputMap['tempUnit'],
+                        timeUnit: inputMap['timeUnit']
+                    });
+                    // No graph for this calculation type
+                    break;
+                
+                case 'find-time':
+                    result = calculations.heatTransfer.time({
+                        ambientTemp: inputMap['ambientTemp'],
+                        initialTemp: inputMap['initialTemp'],
+                        targetTemp: inputMap['targetTemp'],
+                        tempUnit: inputMap['tempUnit'],
+                        timeUnit: inputMap['timeUnit']
+                    });
+                    // No graph for this calculation type
+                    break;
+            }
+        }
+
+        // Ensure result exists before accessing detailedCalculation
+        if (!result) {
+            throw new Error('No calculation result was generated');
+        }
+
+        // Format result text
+        const resultText = result.detailedCalculation || 'No detailed calculation available';
+
+        // Render results
+        UIManager.renderResults({ 
+            formattedText: `<pre style="white-space: pre-wrap; word-wrap: break-word;">${resultText}</pre>` 
+        });
+
+        // Manage graph button visibility
+        if (graphData) {
+            currentGraphData = graphData;
+            document.getElementById('graphButton').style.display = 'inline-block';
+        } else {
+            document.getElementById('graphButton').style.display = 'none';
+        }
+
+        // Prompt to continue
+        UIManager.promptContinue();
+
+    } catch (error) {
+        console.error('Calculation Error:', error);
+        alert(`An error occurred during calculation: ${error.message}. Please check your inputs.`);
+        
+        // Hide graph button in case of error
+        document.getElementById('graphButton').style.display = 'none';
+        currentGraphData = null;
+    }
+}
 
 // Graph Generation
 const graphGenerators = {
@@ -667,164 +814,6 @@ const UIManager = {
 // Calculation Handler
 let currentGraphData = null;
 
-function handleCalculation(event) {
-    event.preventDefault();
-    
-    // Reset previous results and graph
-    document.getElementById('resultSection').style.display = 'none';
-    document.getElementById('graphContainer').style.display = 'none';
-    
-    // Reset global graph data
-    currentGraphData = null;
-
-    const calcType = document.getElementById('calcType').value;
-    const calculationType = document.getElementById('calculationType').value;
-
-    // Collect input values dynamically
-    const inputs = Array.from(document.getElementById('inputForm').querySelectorAll('input, select'))
-        .map(input => ({
-            id: input.id,
-            element: input,
-            value: input.type === 'number' ? parseFloat(input.value) : input.value
-        }));
-
-    // Validate inputs
-    if (!utils.validateNumericInputs(inputs.filter(input => input.element.type === 'number'))) {
-        alert('Please fill in all numeric fields with valid numbers.');
-        return;
-    }
-
-    try {
-        let result, graphData;
-
-        // Growth and Decay Calculations
-        if (calcType === 'growth-decay') {
-            const inputMap = Object.fromEntries(inputs.map(input => [input.id, input.value]));
-            
-            switch (calculationType) {
-                case 'find-amount':
-                    result = calculations.growthDecay.amount({
-                        x0: inputMap['initialValue'],
-                        t1: inputMap['time1'],
-                        x1: inputMap['value1'],
-                        t2: inputMap['time2'],
-                        timeUnit: inputMap['timeUnit'],
-                        unitX: inputMap['unitX']
-                    });
-                    graphData = graphGenerators.growthDecay({
-                        x0: inputMap['initialValue'],
-                        t1: inputMap['time1'],
-                        x1: inputMap['value1'],
-                        t2: inputMap['time2'],
-                        timeUnit: inputMap['timeUnit'],
-                        unitX: inputMap['unitX']
-                    });
-                    break;
-                
-                case 'find-initial':
-                    result = calculations.growthDecay.time({
-                        x0: inputMap['ambientValue'],
-                        x1: inputMap['value1'],
-                        t1: inputMap['time1'],
-                        x2: inputMap['targetValue'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    // No graph for this calculation type
-                    break;
-                
-                case 'find-time':
-                    result = calculations.growthDecay.time({
-                        x0: inputMap['initialValue'],
-                        x1: inputMap['targetValue'],
-                        t1: inputMap['knownTime'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    // No graph for this calculation type
-                    break;
-            }
-        }
-        
-        // Heat Transfer Calculations
-        else if (calcType === 'heat-cool') {
-            const inputMap = Object.fromEntries(inputs.map(input => [input.id, input.value]));
-            
-            switch (calculationType) {
-                case 'find-temp':
-                    result = calculations.heatTransfer.temperature({
-                        ambientTemp: inputMap['ambientTemp'],
-                        initialTemp: inputMap['initialTemp'],
-                        targetTime: inputMap['targetTime'],
-                        tempUnit: inputMap['tempUnit'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    graphData = graphGenerators.heatTransfer({
-                        ambientTemp: inputMap['ambientTemp'],
-                        initialTemp: inputMap['initialTemp'],
-                        targetTime: inputMap['targetTime'],
-                        tempUnit: inputMap['tempUnit'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    break;
-                
-                case 'find-initial-temp':
-                    result = calculations.heatTransfer.initialTemperature({
-                        ambientTemp: inputMap['ambientTemp'],
-                        knownTime1: inputMap['knownTime1'],
-                        knownTemp1: inputMap['knownTemp1'],
-                        knownTime2: inputMap['knownTime2'],
-                        knownTemp2: inputMap['knownTemp2'],
-                        tempUnit: inputMap['tempUnit'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    // No graph for this calculation type
-                    break;
-                
-                case 'find-time':
-                    result = calculations.heatTransfer.time({
-                        ambientTemp: inputMap['ambientTemp'],
-                        initialTemp: inputMap['initialTemp'],
-                        targetTemp: inputMap['targetTemp'],
-                        tempUnit: inputMap['tempUnit'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    // No graph for this calculation type
-                    break;
-            }
-        }
-
-        // Ensure result exists before accessing detailedCalculation
-        if (!result) {
-            throw new Error('No calculation result was generated');
-        }
-
-        // Format result text
-        const resultText = result.detailedCalculation || 'No detailed calculation available';
-
-        // Render results
-        UIManager.renderResults({ 
-            formattedText: `<pre style="white-space: pre-wrap; word-wrap: break-word;">${resultText}</pre>` 
-        });
-
-        // Manage graph button visibility
-        if (graphData) {
-            currentGraphData = graphData;
-            document.getElementById('graphButton').style.display = 'inline-block';
-        } else {
-            document.getElementById('graphButton').style.display = 'none';
-        }
-
-        // Prompt to continue
-        UIManager.promptContinue();
-
-    } catch (error) {
-        console.error('Calculation Error:', error);
-        alert(`An error occurred during calculation: ${error.message}. Please check your inputs.`);
-        
-        // Hide graph button in case of error
-        document.getElementById('graphButton').style.display = 'none';
-        currentGraphData = null;
-    }
-}
 // Add event listener for calculate button on page load
 document.addEventListener('DOMContentLoaded', () => {
     const calculateButton = document.getElementById('calculateButton');
@@ -936,19 +925,20 @@ calculationTypeSelect.addEventListener('change', () => {
                     { label: 'Time 2', id: 'time2', type: 'number' },
                     { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
                 ],
-                'find-initial': [
-                    { label: 'Ambient Value', id: 'ambientValue', type: 'number' },
-                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces','Others'] },
-                    { label: 'Time 1', id: 'time1', type: 'number' },
-                    { label: 'Value at Time 1', id: 'value1', type: 'number' },
-                    { label: 'Target Value', id: 'targetValue', type: 'number' },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
-                ],
                 'find-time': [
                     { label: 'Initial Value (x₀)', id: 'initialValue', type: 'number' },
-                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces','Others'] },
-                    { label: 'Target Value (x₁)', id: 'targetValue', type: 'number' },
-                    { label: 'Known Time', id: 'knownTime', type: 'number' },
+                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces', 'Others'] },
+                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
+                    { label: 'Time 1', id: 'time1', type: 'number' },
+                    { label: 'Target Value (x₂)', id: 'targetValue', type: 'number' },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
+                ],
+                'find-initial': [
+                    { label: 'Time 1', id: 'time1', type: 'number' },
+                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
+                    { label: 'Time 2', id: 'time2', type: 'number' },
+                    { label: 'Value at Time 2 (x₂)', id: 'value2', type: 'number' },
+                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces', 'Others'] },
                     { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
                 ]
             },
