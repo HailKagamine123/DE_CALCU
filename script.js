@@ -75,178 +75,165 @@ const ThemeManager = {
 // Calculation Functions
 const calculations = {
     growthDecay: {
-        amount(options) {
-            const { x0, t1, x1, t2, timeUnit, unitX } = options;
+        // Calculate amount at time t₂
+        amount: (inputs) => {
+            const { x0, x1, t1, t2, timeUnit, unitX } = inputs;
             
-            // Calculate k using Python's method
+            // Calculate growth/decay rate using the initial point and point at t₁
             const k = Math.log(x1 / x0) / t1;
             
-            // Calculate final value using x = ce^kt where c = x0
-            const x2 = x0 * Math.exp(k * t2);
+            // Calculate final amount
+            const result = x0 * Math.exp(k * t2);
             
-            // Calculate rate of change
-            const dxdt = k * x2;
+            return {
+                detailedCalculation: 
+`Growth/Decay Calculation - Amount at t₂
+----------------------------------------
+Given:
+• Initial value (x₀) = ${x0} ${unitX}
+• Value at t₁ (x₁) = ${x1} ${unitX}
+• Time 1 (t₁) = ${t1} ${timeUnit}
+• Time 2 (t₂) = ${t2} ${timeUnit}
 
-            // Keep original output format exactly as it was
-            const detailedSteps = `
-Detailed Calculation Steps:
---------------------
-Step 1: Time Values
-- Time t₁: ${t1} ${timeUnit}
-- Time t₂: ${t2} ${timeUnit}
+Step 1: Calculate growth/decay rate (k)
+k = ln(x₁/x₀)/t₁
+k = ln(${x1}/${x0})/${t1}
+k = ${k.toFixed(6)} per ${timeUnit}
 
-Step 2: Calculate Growth/Decay Rate (k)
-- Formula: k = ln(x₁/x₀) / t₁
-- k = ln(${x1.toFixed(4)} / ${x0.toFixed(4)}) / ${t1.toFixed(4)}
-- k = ${k.toFixed(4)}
-
-Step 3: Compute Final Value (x₂)
-- Formula: x₂ = x₀ * e^(k * t₂)
-- x₂ = ${x0.toFixed(4)} * e^(${k.toFixed(4)} * ${t2.toFixed(4)})
-- x₂ = ${x2.toFixed(4)}
-
-Step 4: Calculate Rate of Change (dx/dt)
-- Formula: dx/dt = k * x₂
-- dx/dt = ${k.toFixed(4)} * ${x2.toFixed(4)}
-- dx/dt = ${dxdt.toFixed(2)} ${unitX}/${timeUnit}
+Step 2: Calculate amount at t₂
+x(t) = x₀ * e^(k*t)
+x(${t2}) = ${x0} * e^(${k.toFixed(6)} * ${t2})
+x(${t2}) = ${result.toFixed(4)} ${unitX}
 
 Verification:
-- Initial Value (x₀): ${x0.toFixed(4)}
-- Value at t₁ (x₁): ${x1.toFixed(4)}
-- Calculated Value at t₂ (x₂): ${x2.toFixed(4)}
-- Growth/Decay Rate (k): ${k.toFixed(4)}
-- Rate of Change at t₂: ${dxdt.toFixed(2)} ${unitX}/${timeUnit}
-`;
+• Using model to calculate x₁: ${x0} * e^(${k.toFixed(6)} * ${t1}) = ${(x0 * Math.exp(k * t1)).toFixed(4)} ${unitX}
+• Using model to calculate x₂: ${x0} * e^(${k.toFixed(6)} * ${t2}) = ${result.toFixed(4)} ${unitX}
 
-            return { 
-                x2, 
-                dxdt, 
-                k, 
-                detailedCalculation: detailedSteps 
+The ${k > 0 ? 'growth' : 'decay'} model is:
+x(t) = ${x0} * e^(${k.toFixed(6)}t) ${unitX}`
             };
         },
 
-        initialValue(options) {
-            const { x1, t1, x2, t2, timeUnit, unitX } = options;
+        initialValue: (inputs) => {
+            const { x1, x2, t1, t2, timeUnit, unitX } = inputs;
             
-            // Calculate k using ratio method from Python
-            const k = Math.log(x1 / x2) / (t1 - t2);
+            // Calculate growth/decay rate using the ratio between two points
+            const k = Math.log(x2 / x1) / (t2 - t1);
             
-            // Calculate initial value using point 1
+            // Calculate initial value by working backwards from the first known point
             const x0 = x1 / Math.exp(k * t1);
+            
+            return {
+                detailedCalculation:
+`Growth/Decay Calculation - Initial Value
+----------------------------------------
+Given:
+• Value at t₁ (x₁) = ${x1} ${unitX}
+• Value at t₂ (x₂) = ${x2} ${unitX}
+• Time 1 (t₁) = ${t1} ${timeUnit}
+• Time 2 (t₂) = ${t2} ${timeUnit}
 
-            // Keep original output format
-            const detailedSteps = `
-Detailed Calculation Steps:
---------------------
-Step 1: Time Values
-- Time t₁: ${t1} ${timeUnit}
-- Time t₂: ${t2} ${timeUnit}
+Step 1: Calculate growth/decay rate (k)
+k = ln(x₂/x₁)/(t₂-t₁)
+k = ln(${x2}/${x1})/(${t2}-${t1})
+k = ${k.toFixed(6)} per ${timeUnit}
 
-Step 2: Calculate Growth/Decay Rate (k)
-- Formula: k = ln(x₁/x₂) / (t₁ - t₂)
-- k = ln(${x1.toFixed(4)} / ${x2.toFixed(4)}) / (${t1.toFixed(4)} - ${t2.toFixed(4)})
-- k = ${k.toFixed(4)}
-
-Step 3: Compute Initial Value (x₀)
-- Formula: x₀ = x₁ / e^(k * t₁)
-- x₀ = ${x1.toFixed(4)} / e^(${k.toFixed(4)} * ${t1.toFixed(4)})
-- x₀ = ${x0.toFixed(4)}
+Step 2: Calculate initial value (x₀)
+x₀ = x₁/e^(k*t₁)
+x₀ = ${x1}/e^(${k.toFixed(6)} * ${t1})
+x₀ = ${x0.toFixed(4)} ${unitX}
 
 Verification:
-- Value at t₁ (x₁): ${x1.toFixed(4)}
-- Value at t₂ (x₂): ${x2.toFixed(4)}
-- Calculated Initial Value (x₀): ${x0.toFixed(4)} ${unitX}
-- Growth/Decay Rate (k): ${k.toFixed(4)}
-`;
+• Using x₀ to calculate x₁: ${x0.toFixed(4)} * e^(${k.toFixed(6)} * ${t1}) = ${(x0 * Math.exp(k * t1)).toFixed(4)} ${unitX}
+• Using x₀ to calculate x₂: ${x0.toFixed(4)} * e^(${k.toFixed(6)} * ${t2}) = ${(x0 * Math.exp(k * t2)).toFixed(4)} ${unitX}
 
-            return { 
-                x0, 
-                k, 
-                detailedCalculation: detailedSteps 
+The ${k > 0 ? 'growth' : 'decay'} model is:
+x(t) = ${x0.toFixed(4)} * e^(${k.toFixed(6)}t) ${unitX}`
             };
         },
 
-        time(options) {
-            const { x0, x1, t1, x2, timeUnit } = options;
+        // Calculate time to reach target value
+        time: (inputs) => {
+            const { x0, x1, t1, x2, timeUnit } = inputs;
             
-            // Calculate k using Python's method
+            // Calculate growth/decay rate using initial point and point at t₁
             const k = Math.log(x1 / x0) / t1;
             
-            // Calculate time using Python's method
+            // Calculate time to reach target value
             const t2 = Math.log(x2 / x0) / k;
+            
+            return {
+                detailedCalculation:
+`Growth/Decay Calculation - Time to Reach Target
+----------------------------------------------
+Given:
+• Initial value (x₀) = ${x0}
+• Value at t₁ (x₁) = ${x1}
+• Time 1 (t₁) = ${t1} ${timeUnit}
+• Target value (x₂) = ${x2}
 
-            // Keep original output format
-            const detailedSteps = `
-Detailed Calculation Steps:
---------------------
-Step 1: Calculate Growth/Decay Rate (k)
-- Formula: k = ln(x₁/x₀) / t₁
-- k = ln(${x1.toFixed(4)} / ${x0.toFixed(4)}) / ${t1.toFixed(4)}
-- k = ${k.toFixed(4)}
+Step 1: Calculate growth/decay rate (k)
+k = ln(x₁/x₀)/t₁
+k = ln(${x1}/${x0})/${t1}
+k = ${k.toFixed(6)} per ${timeUnit}
 
-Step 2: Compute Required Time (t₂)
-- Formula: t₂ = ln(x₂/x₀) / k
-- t₂ = ln(${x2.toFixed(4)} / ${x0.toFixed(4)}) / ${k.toFixed(4)}
-- t₂ = ${t2.toFixed(4)} ${timeUnit}
+Step 2: Calculate time to reach target (t₂)
+t₂ = ln(x₂/x₀)/k
+t₂ = ln(${x2}/${x0})/${k.toFixed(6)}
+t₂ = ${t2.toFixed(4)} ${timeUnit}
 
 Verification:
-- Initial Value (x₀): ${x0.toFixed(4)}
-- Value at t₁ (x₁): ${x1.toFixed(4)}
-- Target Value (x₂): ${x2.toFixed(4)}
-- Growth/Decay Rate (k): ${k.toFixed(4)}
-- Required Time (t₂): ${t2.toFixed(4)} ${timeUnit}
-`;
+• Using t₂ to calculate x₂: ${x0} * e^(${k.toFixed(6)} * ${t2.toFixed(4)}) = ${(x0 * Math.exp(k * t2)).toFixed(4)}
+• Target value (x₂): ${x2}
 
-            return { 
-                t2, 
-                k, 
-                detailedCalculation: detailedSteps 
+The ${k > 0 ? 'growth' : 'decay'} model is:
+x(t) = ${x0} * e^(${k.toFixed(6)}t)`
             };
         }
     },
 
     heatTransfer: {
         temperature(options) {
-            const { ambientTemp, initialTemp, targetTime, tempUnit, timeUnit } = options;
+            const { ambientTemp, initialTemp, targetTime, tempUnit, timeUnit, knownTemp1, knownTime1 } = options;
 
             // Calculate temperature difference C
             const C = initialTemp - ambientTemp;
-
-            // Heat transfer coefficient
-            const k = Math.log((31 - ambientTemp) / C) / -1; // Using t=1 min data point
-
+            
+            // Calculate k using the known point
+            const k = Math.log((knownTemp1 - ambientTemp) / C) / -knownTime1;
+            
             // Calculate target temperature
             const targetTemp = ambientTemp + C * Math.exp(-k * targetTime);
 
-            // Generate detailed explanation
             const detailedSteps = `
 Detailed Heat Transfer Calculation:
 --------------------
 Step 1: Initial Conditions
 @t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
+Known point: @t=${knownTime1} ${timeUnit}, T=${knownTemp1}°${tempUnit}
 T-T∞=Ce^(-kt)
 
-Step 2: Calculate C (Initial Temperature Difference)
-${initialTemp.toFixed(2)}=${ambientTemp.toFixed(2)}+C
-C=${C.toFixed(2)}
+Step 2: Calculate Initial Temperature Difference (C)
+C = T₀ - T∞
+C = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)}
+C = ${C.toFixed(2)}°${tempUnit}
 
-Step 3: Calculate k using t=1 ${timeUnit} data point
-${31}=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-k*1)
-${(31 - ambientTemp).toFixed(2)}=${C.toFixed(2)}e^(-k*1)
-k=${k.toFixed(6)}
+Step 3: Calculate k using known point
+${knownTemp1} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-k*${knownTime1})
+${(knownTemp1 - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-k*${knownTime1})
+k = ${k.toFixed(6)} per ${timeUnit}
 
-Step 4: Temperature as a function of time:
-T=${ambientTemp.toFixed(2)}+${C.toFixed(2)}e^(-${k.toFixed(6)}t)
-T=${targetTemp.toFixed(2)}°${tempUnit}
+Step 4: Calculate Temperature at Target Time
+T = T∞ + Ce^(-kt)
+T = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(6)}*${targetTime})
+T = ${targetTemp.toFixed(2)}°${tempUnit}
 
 Verification:
-- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
-- Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
-- Temperature Difference (C): ${C.toFixed(2)}
-- Heat Transfer Coefficient (k): ${k.toFixed(6)}
-- Final Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
-`;
+• Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+• Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
+• Known Point: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
+• Temperature at t=${targetTime} ${timeUnit}: ${targetTemp.toFixed(2)}°${tempUnit}
+• Using model to verify known point: ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(6)}*${knownTime1}) = ${(ambientTemp + C * Math.exp(-k * knownTime1)).toFixed(2)}°${tempUnit}`;
 
             return {
                 targetTemp,
@@ -255,48 +242,41 @@ Verification:
         },
 
         initialTemperature(options) {
-            const { ambientTemp, knownTime1, knownTemp1, knownTime2, knownTemp2, tempUnit, timeUnit } = options;
+            const { ambientTemp, knownTemp1, knownTime1, knownTemp2, knownTime2, tempUnit, timeUnit } = options;
 
             // Calculate temperature differences for both known points
             const C1 = knownTemp1 - ambientTemp;
             const C2 = knownTemp2 - ambientTemp;
 
             // Calculate k using the ratio of the two points
-            const k = -Math.log(C2 / C1) / (knownTime2 - knownTime1);
+            const k = Math.log(C1 / C2) / (knownTime2 - knownTime1);
 
-            // Calculate initial temperature using point 1
-            const initialTemp = ambientTemp + C1 * Math.exp(k * knownTime1);
+            // Calculate initial temperature
+            const initialTemp = ambientTemp + (knownTemp1 - ambientTemp) / Math.exp(-k * knownTime1);
 
-            // Generate detailed explanation
             const detailedSteps = `
 Detailed Heat Transfer Calculation:
 --------------------
-Step 1: Calculate Temperature Differences
-C₁ = T₁ - T∞ = ${knownTemp1.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C1.toFixed(2)}
-C₂ = T₂ - T∞ = ${knownTemp2.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C2.toFixed(2)}
+Step 1: Calculate Temperature Differences from Ambient
+C₁ = T₁ - T∞ = ${knownTemp1.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C1.toFixed(2)}°${tempUnit}
+C₂ = T₂ - T∞ = ${knownTemp2.toFixed(2)} - ${ambientTemp.toFixed(2)} = ${C2.toFixed(2)}°${tempUnit}
 
 Step 2: Calculate Heat Transfer Coefficient (k)
-- Using the ratio of two known points:
-- T₁ - T∞ = C₁e^(-k*t₁)
-- T₂ - T∞ = C₁e^(-k*t₂)
-- (T₂ - T∞)/(T₁ - T∞) = e^(-k(t₂-t₁))
-- k = -ln((T₂ - T∞)/(T₁ - T∞))/(t₂-t₁)
-k = -ln(${C2.toFixed(4)}/${C1.toFixed(4)})/(${knownTime2} - ${knownTime1})
-k = ${k.toFixed(6)}
+k = ln(C₁/C₂)/(t₂-t₁)
+k = ln(${C1.toFixed(4)}/${C2.toFixed(4)})/(${knownTime2} - ${knownTime1})
+k = ${k.toFixed(6)} per ${timeUnit}
 
 Step 3: Calculate Initial Temperature
-- Using point 1:
-T₀ = T∞ + (T₁ - T∞)e^(kt₁)
-T₀ = ${ambientTemp.toFixed(2)} + ${C1.toFixed(2)} * e^(${k.toFixed(6)} * ${knownTime1})
+T₀ = T∞ + (T₁ - T∞)/e^(-kt₁)
+T₀ = ${ambientTemp.toFixed(2)} + (${knownTemp1.toFixed(2)} - ${ambientTemp.toFixed(2)})/e^(${(-k * knownTime1).toFixed(6)})
 T₀ = ${initialTemp.toFixed(2)}°${tempUnit}
 
 Verification:
-- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
-- Known Point 1: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
-- Known Point 2: ${knownTemp2.toFixed(2)}°${tempUnit} at t=${knownTime2} ${timeUnit}
-- Heat Transfer Coefficient (k): ${k.toFixed(6)}
-- Calculated Initial Temperature: ${initialTemp.toFixed(2)}°${tempUnit}
-`;
+• Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+• Known Point 1: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
+• Known Point 2: ${knownTemp2.toFixed(2)}°${tempUnit} at t=${knownTime2} ${timeUnit}
+• Using T₀ to calculate T₁: ${ambientTemp.toFixed(2)} + (${(initialTemp - ambientTemp).toFixed(2)})e^(-${k.toFixed(6)}*${knownTime1}) = ${(ambientTemp + (initialTemp - ambientTemp) * Math.exp(-k * knownTime1)).toFixed(2)}°${tempUnit}
+• Using T₀ to calculate T₂: ${ambientTemp.toFixed(2)} + (${(initialTemp - ambientTemp).toFixed(2)})e^(-${k.toFixed(6)}*${knownTime2}) = ${(ambientTemp + (initialTemp - ambientTemp) * Math.exp(-k * knownTime2)).toFixed(2)}°${tempUnit}`;
 
             return {
                 initialTemp,
@@ -305,7 +285,7 @@ Verification:
         },
 
         time(options) {
-            const { ambientTemp, initialTemp, knownTemp1, knownTime1, targetTemp, tempUnit, timeUnit } = options;
+            const { ambientTemp, initialTemp, targetTemp, tempUnit, timeUnit, knownTemp1, knownTime1 } = options;
 
             // Calculate temperature difference C
             const C = initialTemp - ambientTemp;
@@ -314,7 +294,7 @@ Verification:
             const k = Math.log((knownTemp1 - ambientTemp) / C) / -knownTime1;
             
             // Calculate time to reach target temperature
-            const calculatedTime = -Math.log((targetTemp - ambientTemp) / C) / k;
+            const time = -Math.log((targetTemp - ambientTemp) / C) / k;
 
             const detailedSteps = `
 Detailed Heat Transfer Calculation:
@@ -339,22 +319,20 @@ T = T∞ + Ce^(-kt)
 ${targetTemp.toFixed(2)} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
 ${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
 t = -ln((${targetTemp.toFixed(2)} - ${ambientTemp.toFixed(2)})/${C.toFixed(2)})/${k.toFixed(6)}
-t = ${calculatedTime.toFixed(2)} ${timeUnit}
+t = ${time.toFixed(2)} ${timeUnit}
 
-Time in minutes and seconds: ${Math.floor(calculatedTime)} min and ${Math.round((calculatedTime % 1) * 60)} seconds
+Time in minutes and seconds: ${Math.floor(time)} min and ${Math.round((time % 1) * 60)} seconds
 
 Verification:
-- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
-- Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
-- Known Point: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
-- Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
-- Cooling Coefficient (k): ${k.toFixed(6)} per ${timeUnit}
-- Required Time: ${calculatedTime.toFixed(2)} ${timeUnit}`;
+• Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+• Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
+• Known Point: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
+• Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
+• Using calculated time: ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(6)}*${time.toFixed(2)}) = ${(ambientTemp + C * Math.exp(-k * time)).toFixed(2)}°${tempUnit}`;
 
             return {
-                time: calculatedTime,
+                time,
                 detailedCalculation: detailedSteps
-
             };
         }
     }
@@ -440,16 +418,18 @@ function handleCalculation(event) {
             switch (calculationType) {
                 case 'find-temp':
                     result = calculations.heatTransfer.temperature({
-                        ambientTemp: inputMap['ambientTemp'],
-                        initialTemp: inputMap['initialTemp'],
-                        targetTime: inputMap['targetTime'],
+                        ambientTemp: parseFloat(inputMap['ambientTemp']),
+                        initialTemp: parseFloat(inputMap['initialTemp']),
+                        knownTemp1: parseFloat(inputMap['knownTemp1']),
+                        knownTime1: parseFloat(inputMap['knownTime1']),
+                        targetTime: parseFloat(inputMap['targetTime']),
                         tempUnit: inputMap['tempUnit'],
                         timeUnit: inputMap['timeUnit']
                     });
                     graphData = graphGenerators.heatTransfer({
-                        ambientTemp: inputMap['ambientTemp'],
-                        initialTemp: inputMap['initialTemp'],
-                        targetTime: inputMap['targetTime'],
+                        ambientTemp: parseFloat(inputMap['ambientTemp']),
+                        initialTemp: parseFloat(inputMap['initialTemp']),
+                        targetTime: parseFloat(inputMap['targetTime']),
                         tempUnit: inputMap['tempUnit'],
                         timeUnit: inputMap['timeUnit']
                     });
@@ -620,6 +600,8 @@ calculationTypeSelect.addEventListener('change', () => {
                 'find-temp': [
                     { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
                     { label: 'Initial Temperature', id: 'initialTemp', type: 'number' },
+                    { label: 'Known Temperature Point', id: 'knownTemp1', type: 'number' },
+                    { label: 'Time at Known Point', id: 'knownTime1', type: 'number' },
                     { label: 'Target Time', id: 'targetTime', type: 'number' },
                     { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
                     { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
