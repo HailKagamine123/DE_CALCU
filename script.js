@@ -305,57 +305,56 @@ Verification:
         },
 
         time(options) {
-            const { ambientTemp, initialTemp, targetTemp, tempUnit, timeUnit } = options;
-        
+            const { ambientTemp, initialTemp, knownTemp1, knownTime1, targetTemp, tempUnit, timeUnit } = options;
+
             // Calculate temperature difference C
             const C = initialTemp - ambientTemp;
             
-            // Calculate k using the known data point at t=1 min
-            // Using the same method as in other heat transfer functions
-            const k = Math.log((31 - ambientTemp) / C) / -1;
+            // Calculate k using the known point
+            const k = Math.log((knownTemp1 - ambientTemp) / C) / -knownTime1;
             
             // Calculate time to reach target temperature
-            const time = -Math.log((targetTemp - ambientTemp) / C) / k;
-        
-            // Generate detailed explanation
+            const calculatedTime = -Math.log((targetTemp - ambientTemp) / C) / k;
+
             const detailedSteps = `
-        Detailed Heat Transfer Calculation:
-        --------------------
-        Step 1: Initial Conditions
-        @t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
-        T-T∞=Ce^(-kt)
-        
-        Step 2: Calculate Initial Temperature Difference (C)
-        C = T₀ - T∞
-        C = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)}
-        C = ${C.toFixed(2)}°${tempUnit}
-        
-        Step 3: Calculate k using data point @t=1 ${timeUnit}
-        Known: @t=1 ${timeUnit}, T=31°${tempUnit}
-        31 = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-k*1)
-        ${(31 - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-k)
-        k = ${k.toFixed(8)} per ${timeUnit}
-        
-        Step 4: Solve for time to reach target temperature
-        ${targetTemp.toFixed(2)} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
-        ${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(8)}t)
-        ln(${(targetTemp - ambientTemp).toFixed(2)}/${C.toFixed(2)}) = -${k.toFixed(8)}t
-        t = ${time.toFixed(3)} ${timeUnit}
-        
-        Verification:
-        - Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
-        - Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
-        - Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
-        - Temperature Difference (C): ${C.toFixed(2)}°${tempUnit}
-        - Heat Transfer Coefficient (k): ${k.toFixed(8)} per ${timeUnit}
-        - Required Time: ${time.toFixed(3)} ${timeUnit}
-        
-        Time in minutes and seconds: ${Math.floor(time)} min and ${Math.round((time % 1) * 60)} seconds
-        `;
-        
+Detailed Heat Transfer Calculation:
+--------------------
+Step 1: Initial Conditions
+@t=0 ${timeUnit}, T=${initialTemp.toFixed(2)}°${tempUnit}, T∞=${ambientTemp.toFixed(2)}°${tempUnit}
+Known point: @t=${knownTime1} ${timeUnit}, T=${knownTemp1}°${tempUnit}
+T-T∞=Ce^(-kt)
+
+Step 2: Calculate Initial Temperature Difference (C)
+C = T₀ - T∞
+C = ${initialTemp.toFixed(2)} - ${ambientTemp.toFixed(2)}
+C = ${C.toFixed(2)}°${tempUnit}
+
+Step 3: Calculate k using known point
+${knownTemp1} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-k*${knownTime1})
+${(knownTemp1 - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-k*${knownTime1})
+k = ${k.toFixed(6)} per ${timeUnit}
+
+Step 4: Calculate Time to Reach Target Temperature
+T = T∞ + Ce^(-kt)
+${targetTemp.toFixed(2)} = ${ambientTemp.toFixed(2)} + ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+${(targetTemp - ambientTemp).toFixed(2)} = ${C.toFixed(2)}e^(-${k.toFixed(6)}t)
+t = -ln((${targetTemp.toFixed(2)} - ${ambientTemp.toFixed(2)})/${C.toFixed(2)})/${k.toFixed(6)}
+t = ${calculatedTime.toFixed(2)} ${timeUnit}
+
+Time in minutes and seconds: ${Math.floor(calculatedTime)} min and ${Math.round((calculatedTime % 1) * 60)} seconds
+
+Verification:
+- Ambient Temperature (T∞): ${ambientTemp.toFixed(2)}°${tempUnit}
+- Initial Temperature (T₀): ${initialTemp.toFixed(2)}°${tempUnit}
+- Known Point: ${knownTemp1.toFixed(2)}°${tempUnit} at t=${knownTime1} ${timeUnit}
+- Target Temperature: ${targetTemp.toFixed(2)}°${tempUnit}
+- Cooling Coefficient (k): ${k.toFixed(6)} per ${timeUnit}
+- Required Time: ${calculatedTime.toFixed(2)} ${timeUnit}`;
+
             return {
-                time,
+                time: calculatedTime,
                 detailedCalculation: detailedSteps
+
             };
         }
     }
@@ -469,16 +468,18 @@ function handleCalculation(event) {
                     // No graph for this calculation type
                     break;
                 
-                case 'find-time':
-                    result = calculations.heatTransfer.time({
-                        ambientTemp: inputMap['ambientTemp'],
-                        initialTemp: inputMap['initialTemp'],
-                        targetTemp: inputMap['targetTemp'],
-                        tempUnit: inputMap['tempUnit'],
-                        timeUnit: inputMap['timeUnit']
-                    });
-                    // No graph for this calculation type
-                    break;
+                    case 'find-time':
+                        result = calculations.heatTransfer.time({
+                            ambientTemp: inputMap['ambientTemp'],
+                            initialTemp: inputMap['initialTemp'],
+                            knownTemp1: inputMap['knownTemp1'],
+                            knownTime1: inputMap['knownTime1'],
+                            targetTemp: inputMap['targetTemp'],
+                            tempUnit: inputMap['tempUnit'],
+                            timeUnit: inputMap['timeUnit']
+                        });
+                        // No graph for this calculation type
+                        break;
             }
         }
 
@@ -515,6 +516,171 @@ function handleCalculation(event) {
         currentGraphData = null;
     }
 }
+
+// Initialization and Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const proceedButton = document.getElementById('proceedButton');
+    const welcomeSection = document.getElementById('welcomeSection');
+    const calculatorSection = document.getElementById('calculatorSection');
+
+    proceedButton.addEventListener('click', () => {
+        welcomeSection.style.display = 'none';
+        calculatorSection.style.display = 'block';
+    });
+
+
+    // Theme Initialization
+    ThemeManager.initialize();
+
+    // Chart.js Loader
+    const chartScript = document.createElement('script');
+    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    chartScript.async = true;
+    chartScript.onerror = () => {
+        console.error('Chart.js loading failed');
+        alert('Graphing library could not be loaded');
+    };
+    document.head.appendChild(chartScript);
+
+    // Event Listeners for Calculation Types
+    // Modify the existing event listener in the DOMContentLoaded block
+
+const calcTypeSelect = document.getElementById('calcType');
+const calculationTypeSelect = document.getElementById('calculationType');
+const calculatorOptions = document.getElementById('calculatorOptions');
+const inputForm = document.getElementById('inputForm');
+
+calcTypeSelect.addEventListener('change', () => {
+    const selectedType = calcTypeSelect.value;
+    calculationTypeSelect.innerHTML = '<option value="">Select Calculation Variant</option>';
+    inputForm.innerHTML = '';
+
+    if (selectedType) {
+        calculatorOptions.style.display = 'block';
+
+        const calculationTypes = {
+            'growth-decay': [
+                { value: 'find-amount', text: 'Find Amount/Value' },
+                { value: 'find-initial', text: 'Find Initial Value' },
+                { value: 'find-time', text: 'Find Time' }
+            ],
+            'heat-cool': [
+                { value: 'find-temp', text: 'Find Temperature' },
+                { value: 'find-initial-temp', text: 'Find Initial Temperature' },
+                { value: 'find-time', text: 'Find Time' }
+            ]
+        };
+
+        calculationTypes[selectedType]?.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type.value;
+            option.textContent = type.text;
+            calculationTypeSelect.appendChild(option);
+        });
+    } else {
+        calculatorOptions.style.display = 'none';
+    }
+});
+
+// Add event listener for calculation type selection
+calculationTypeSelect.addEventListener('change', () => {
+    const selectedType = calcTypeSelect.value;
+    const selectedCalculationType = calculationTypeSelect.value;
+    inputForm.innerHTML = '';
+
+    if (selectedCalculationType) {
+        const inputConfigurations = {
+            'growth-decay': {
+                'find-amount': [
+                    { label: 'Initial Value (x₀)', id: 'initialValue', type: 'number' },
+                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces','Others'] },
+                    { label: 'Time 1', id: 'time1', type: 'number' },
+                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
+                    { label: 'Time 2', id: 'time2', type: 'number' },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
+                ],
+                'find-time': [
+                    { label: 'Initial Value (x₀)', id: 'initialValue', type: 'number' },
+                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces', 'Others'] },
+                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
+                    { label: 'Time 1', id: 'time1', type: 'number' },
+                    { label: 'Target Value (x₂)', id: 'targetValue', type: 'number' },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
+                ],
+                'find-initial': [
+                    { label: 'Time 1', id: 'time1', type: 'number' },
+                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
+                    { label: 'Time 2', id: 'time2', type: 'number' },
+                    { label: 'Value at Time 2 (x₂)', id: 'value2', type: 'number' },
+                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces', 'Others'] },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
+                ]
+            },
+            'heat-cool': {
+                'find-temp': [
+                    { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
+                    { label: 'Initial Temperature', id: 'initialTemp', type: 'number' },
+                    { label: 'Target Time', id: 'targetTime', type: 'number' },
+                    { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
+                ],
+                'find-initial-temp': [
+                    { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
+                    { label: 'Known Time 1', id: 'knownTime1', type: 'number' },
+                    { label: 'Known Temperature 1', id: 'knownTemp1', type: 'number' },
+                    { label: 'Known Time 2', id: 'knownTime2', type: 'number' },
+                    { label: 'Known Temperature 2', id: 'knownTemp2', type: 'number' },
+                    { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
+                ],
+                'find-time': [
+                    { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
+                    { label: 'Initial Temperature', id: 'initialTemp', type: 'number' },
+                    { label: 'Known Temperature Point', id: 'knownTemp1', type: 'number' },
+                    { label: 'Time at Known Point', id: 'knownTime1', type: 'number' },
+                    { label: 'Target Temperature', id: 'targetTemp', type: 'number' },
+                    { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
+                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
+                ]
+            }
+        };
+
+        const inputs = inputConfigurations[selectedType][selectedCalculationType];
+        
+        inputs.forEach(input => {
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'input-group';
+
+            const label = document.createElement('label');
+            label.htmlFor = input.id;
+            label.textContent = input.label;
+            inputGroup.appendChild(label);
+
+            let inputElement;
+            if (input.type === 'select') {
+                inputElement = document.createElement('select');
+                input.options.forEach(optionText => {
+                    const option = document.createElement('option');
+                    option.value = optionText.toLowerCase();
+                    option.textContent = optionText;
+                    inputElement.appendChild(option);
+                });
+            } else {
+                inputElement = document.createElement('input');
+                inputElement.type = input.type;
+            }
+
+            inputElement.id = input.id;
+            inputElement.name = input.id;
+            inputGroup.appendChild(inputElement);
+
+            inputForm.appendChild(inputGroup);
+        });
+    } else {
+        inputForm.innerHTML = '';
+    }
+});
+});
 
 // Graph Generation
 const graphGenerators = {
@@ -837,167 +1003,4 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('No graph data available. Please perform a calculation first.');
         }
     });
-});
-
-// Initialization and Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    const proceedButton = document.getElementById('proceedButton');
-    const welcomeSection = document.getElementById('welcomeSection');
-    const calculatorSection = document.getElementById('calculatorSection');
-
-    proceedButton.addEventListener('click', () => {
-        welcomeSection.style.display = 'none';
-        calculatorSection.style.display = 'block';
-    });
-
-
-    // Theme Initialization
-    ThemeManager.initialize();
-
-    // Chart.js Loader
-    const chartScript = document.createElement('script');
-    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    chartScript.async = true;
-    chartScript.onerror = () => {
-        console.error('Chart.js loading failed');
-        alert('Graphing library could not be loaded');
-    };
-    document.head.appendChild(chartScript);
-
-    // Event Listeners for Calculation Types
-    // Modify the existing event listener in the DOMContentLoaded block
-
-const calcTypeSelect = document.getElementById('calcType');
-const calculationTypeSelect = document.getElementById('calculationType');
-const calculatorOptions = document.getElementById('calculatorOptions');
-const inputForm = document.getElementById('inputForm');
-
-calcTypeSelect.addEventListener('change', () => {
-    const selectedType = calcTypeSelect.value;
-    calculationTypeSelect.innerHTML = '<option value="">Select Calculation Variant</option>';
-    inputForm.innerHTML = '';
-
-    if (selectedType) {
-        calculatorOptions.style.display = 'block';
-
-        const calculationTypes = {
-            'growth-decay': [
-                { value: 'find-amount', text: 'Find Amount/Value' },
-                { value: 'find-initial', text: 'Find Initial Value' },
-                { value: 'find-time', text: 'Find Time' }
-            ],
-            'heat-cool': [
-                { value: 'find-temp', text: 'Find Temperature' },
-                { value: 'find-initial-temp', text: 'Find Initial Temperature' },
-                { value: 'find-time', text: 'Find Time' }
-            ]
-        };
-
-        calculationTypes[selectedType]?.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type.value;
-            option.textContent = type.text;
-            calculationTypeSelect.appendChild(option);
-        });
-    } else {
-        calculatorOptions.style.display = 'none';
-    }
-});
-
-// Add event listener for calculation type selection
-calculationTypeSelect.addEventListener('change', () => {
-    const selectedType = calcTypeSelect.value;
-    const selectedCalculationType = calculationTypeSelect.value;
-    inputForm.innerHTML = '';
-
-    if (selectedCalculationType) {
-        const inputConfigurations = {
-            'growth-decay': {
-                'find-amount': [
-                    { label: 'Initial Value (x₀)', id: 'initialValue', type: 'number' },
-                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces','Others'] },
-                    { label: 'Time 1', id: 'time1', type: 'number' },
-                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
-                    { label: 'Time 2', id: 'time2', type: 'number' },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
-                ],
-                'find-time': [
-                    { label: 'Initial Value (x₀)', id: 'initialValue', type: 'number' },
-                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces', 'Others'] },
-                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
-                    { label: 'Time 1', id: 'time1', type: 'number' },
-                    { label: 'Target Value (x₂)', id: 'targetValue', type: 'number' },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
-                ],
-                'find-initial': [
-                    { label: 'Time 1', id: 'time1', type: 'number' },
-                    { label: 'Value at Time 1 (x₁)', id: 'value1', type: 'number' },
-                    { label: 'Time 2', id: 'time2', type: 'number' },
-                    { label: 'Value at Time 2 (x₂)', id: 'value2', type: 'number' },
-                    { label: 'Unit of x', id: 'unitX', type: 'select', options: ['Kilograms', 'Grams', 'Milligrams', 'Pounds', 'Ounces', 'Others'] },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days', 'year'] }
-                ]
-            },
-            'heat-cool': {
-                'find-temp': [
-                    { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
-                    { label: 'Initial Temperature', id: 'initialTemp', type: 'number' },
-                    { label: 'Target Time', id: 'targetTime', type: 'number' },
-                    { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
-                ],
-                'find-initial-temp': [
-                    { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
-                    { label: 'Known Time 1', id: 'knownTime1', type: 'number' },
-                    { label: 'Known Temperature 1', id: 'knownTemp1', type: 'number' },
-                    { label: 'Known Time 2', id: 'knownTime2', type: 'number' },
-                    { label: 'Known Temperature 2', id: 'knownTemp2', type: 'number' },
-                    { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
-                ],
-                'find-time': [
-                    { label: 'Ambient Temperature', id: 'ambientTemp', type: 'number' },
-                    { label: 'Initial Temperature', id: 'initialTemp', type: 'number' },
-                    { label: 'Target Temperature', id: 'targetTemp', type: 'number' },
-                    { label: 'Temperature Unit', id: 'tempUnit', type: 'select', options: ['Celsius', 'Fahrenheit', 'Kelvin'] },
-                    { label: 'Time Unit', id: 'timeUnit', type: 'select', options: ['seconds', 'minutes', 'hours', 'days'] }
-                ]
-            }
-        };
-
-        const inputs = inputConfigurations[selectedType][selectedCalculationType];
-        
-        inputs.forEach(input => {
-            const inputGroup = document.createElement('div');
-            inputGroup.className = 'input-group';
-
-            const label = document.createElement('label');
-            label.htmlFor = input.id;
-            label.textContent = input.label;
-            inputGroup.appendChild(label);
-
-            let inputElement;
-            if (input.type === 'select') {
-                inputElement = document.createElement('select');
-                input.options.forEach(optionText => {
-                    const option = document.createElement('option');
-                    option.value = optionText.toLowerCase();
-                    option.textContent = optionText;
-                    inputElement.appendChild(option);
-                });
-            } else {
-                inputElement = document.createElement('input');
-                inputElement.type = input.type;
-            }
-
-            inputElement.id = input.id;
-            inputElement.name = input.id;
-            inputGroup.appendChild(inputElement);
-
-            inputForm.appendChild(inputGroup);
-        });
-    } else {
-        inputForm.innerHTML = '';
-    }
-});
 });
