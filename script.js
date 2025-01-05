@@ -342,7 +342,7 @@ Verification:
 function handleCalculation(event) {
     event.preventDefault();
     
-    // Reset previous results and graph
+    // Only reset the results and graph sections, not calculatorOptions
     document.getElementById('resultSection').style.display = 'none';
     document.getElementById('graphContainer').style.display = 'none';
     
@@ -375,36 +375,41 @@ function handleCalculation(event) {
             
             switch (calculationType) {
                 case 'find-amount':
-                    // Match Python inputs
                     result = calculations.growthDecay.amount({
-                        x0: inputMap['initialValue'],  // x0 - initial value
-                        t1: inputMap['time1'],         // t1 - time for x1
-                        x1: inputMap['value1'],        // x1 - amount at time t1
-                        t2: inputMap['time2'],         // t2 - target time
+                        x0: inputMap['initialValue'],
+                        t1: inputMap['time1'],
+                        x1: inputMap['value1'],
+                        t2: inputMap['time2'],
+                        timeUnit: inputMap['timeUnit'],
+                        unitX: inputMap['unitX']
+                    });
+                    graphData = graphGenerators.growthDecay({
+                        x0: parseFloat(inputMap['initialValue']),
+                        t1: parseFloat(inputMap['time1']),
+                        x1: parseFloat(inputMap['value1']),
+                        t2: parseFloat(inputMap['time2']),
                         timeUnit: inputMap['timeUnit'],
                         unitX: inputMap['unitX']
                     });
                     break;
                 
                 case 'find-initial':
-                    // Match Python inputs for initial value calculation
                     result = calculations.growthDecay.initialValue({
-                        x1: inputMap['value1'],        // x1 - amount at time t1
-                        t1: inputMap['time1'],         // t1 - first time
-                        x2: inputMap['value2'],        // x2 - amount at time t2
-                        t2: inputMap['time2'],         // t2 - second time
+                        x1: inputMap['value1'],
+                        t1: inputMap['time1'],
+                        x2: inputMap['value2'],
+                        t2: inputMap['time2'],
                         timeUnit: inputMap['timeUnit'],
                         unitX: inputMap['unitX']
                     });
                     break;
                 
                 case 'find-time':
-                    // Match Python inputs for time calculation
                     result = calculations.growthDecay.time({
-                        x0: inputMap['initialValue'],  // x0 - initial value
-                        x1: inputMap['value1'],        // x1 - amount at time t1
-                        t1: inputMap['time1'],         // t1 - known time
-                        x2: inputMap['targetValue'],   // x2 - target value
+                        x0: inputMap['initialValue'],
+                        x1: inputMap['value1'],
+                        t1: inputMap['time1'],
+                        x2: inputMap['targetValue'],
                         timeUnit: inputMap['timeUnit']
                     });
                     break;
@@ -445,43 +450,43 @@ function handleCalculation(event) {
                         tempUnit: inputMap['tempUnit'],
                         timeUnit: inputMap['timeUnit']
                     });
-                    // No graph for this calculation type
                     break;
                 
-                    case 'find-time':
-                        result = calculations.heatTransfer.time({
-                            ambientTemp: inputMap['ambientTemp'],
-                            initialTemp: inputMap['initialTemp'],
-                            knownTemp1: inputMap['knownTemp1'],
-                            knownTime1: inputMap['knownTime1'],
-                            targetTemp: inputMap['targetTemp'],
-                            tempUnit: inputMap['tempUnit'],
-                            timeUnit: inputMap['timeUnit']
-                        });
-                        // No graph for this calculation type
-                        break;
+                case 'find-time':
+                    result = calculations.heatTransfer.time({
+                        ambientTemp: inputMap['ambientTemp'],
+                        initialTemp: inputMap['initialTemp'],
+                        knownTemp1: inputMap['knownTemp1'],
+                        knownTime1: inputMap['knownTime1'],
+                        targetTemp: inputMap['targetTemp'],
+                        tempUnit: inputMap['tempUnit'],
+                        timeUnit: inputMap['timeUnit']
+                    });
+                    break;
             }
         }
 
-        // Ensure result exists before accessing detailedCalculation
+        // Ensure result exists before proceeding
         if (!result) {
             throw new Error('No calculation result was generated');
         }
 
-        // Format result text
+        // Show calculator options and results
+        document.getElementById('calculatorOptions').style.display = 'block';
+        
+        // Format and show result text
         const resultText = result.detailedCalculation || 'No detailed calculation available';
-
-        // Render results
         UIManager.renderResults({ 
             formattedText: `<pre style="white-space: pre-wrap; word-wrap: break-word;">${resultText}</pre>` 
         });
 
-        // Manage graph button visibility
+        // Show/hide graph button based on data availability
+        const graphButton = document.getElementById('graphButton');
         if (graphData) {
             currentGraphData = graphData;
-            document.getElementById('graphButton').style.display = 'inline-block';
+            graphButton.style.display = 'inline-block';
         } else {
-            document.getElementById('graphButton').style.display = 'none';
+            graphButton.style.display = 'none';
         }
 
         // Prompt to continue
@@ -868,8 +873,9 @@ const UIManager = {
         document.getElementById('calcType').selectedIndex = 0;
         document.getElementById('calculationType').innerHTML = '<option value="">Select Calculation Variant</option>';
         document.getElementById('inputForm').innerHTML = '';
-        document.getElementById('calculatorOptions').style.display = 'none';
         document.getElementById('resultSection').style.display = 'none';
+        document.getElementById('graphContainer').style.display = 'none';
+        // Removed the line that hides calculatorOptions
     },
 
     renderResults(resultData) {
